@@ -1,16 +1,9 @@
-require("./css")
-
-const {Map} = require("../util/map")
 const {Subscription, PipelineSubscription, StoppableSubscription, DOMSubscription} = require("subscription")
-const {requestAnimationFrame, cancelAnimationFrame, elt, ensureCSSAdded} = require("../util/dom")
 const {mapThrough} = require("../transform")
 const {Mark} = require("../model")
 
 const {parseOptions} = require("./options")
 const {SelectionState, TextSelection, NodeSelection, Selection, hasFocus} = require("./selection")
-const {scrollIntoView, posAtCoords, coordsAtPos} = require("./dompos")
-const {draw, redraw, DIRTY_REDRAW, DIRTY_RESCAN} = require("./draw")
-const {Input} = require("./input")
 const {RangeStore, MarkedRange} = require("./range")
 const {EditorTransform} = require("./transform")
 const {EditorScheduler, UpdateScheduler} = require("./update")
@@ -25,8 +18,6 @@ class ProseMirror {
   // and, if it has a [`place`](#place) option, add it to the
   // document.
   constructor(opts) {
-    ensureCSSAdded()
-
     opts = this.options = parseOptions(opts)
     // :: Schema
     // The schema for this editor's document.
@@ -35,14 +26,6 @@ class ProseMirror {
     if (opts.doc == null) opts.doc = this.schema.nodes.doc.createAndFill()
     if (opts.doc.type.schema != this.schema)
       throw new RangeError("Schema option does not correspond to schema used in doc option")
-    // :: DOMNode
-    // The editable DOM node containing the document.
-    this.content = elt("div", {class: "ProseMirror-content", "pm-container": true})
-    if (!opts.spellCheck) this.content.spellcheck = false
-    // :: DOMNode
-    // The outer DOM element of the editor.
-    this.wrapper = elt("div", {class: "ProseMirror"}, this.content)
-    this.wrapper.ProseMirror = this
 
     // :: Object<Subscription>
     // A wrapper object containing the various [event
@@ -156,16 +139,7 @@ class ProseMirror {
       domDrop: new DOMSubscription
     }
 
-    if (opts.place && opts.place.appendChild)
-      opts.place.appendChild(this.wrapper)
-    else if (opts.place)
-      opts.place(this.wrapper)
-
     this.setDocInner(opts.doc)
-    draw(this, this.doc)
-    this.content.contentEditable = true
-    if (opts.label)
-      this.content.setAttribute("aria-label", opts.label)
 
     // A namespace where plugins can store their state. See the `Plugin` class.
     this.plugin = Object.create(null)
@@ -176,13 +150,9 @@ class ProseMirror {
     this.history = null
 
     this.operation = null
-    this.dirtyNodes = new Map // Maps node object to 1 (re-scan content) or 2 (redraw entirely)
     this.flushScheduled = null
     this.centralScheduler = new EditorScheduler(this)
 
-    this.sel = new SelectionState(this, Selection.findAtStart(this.doc))
-    this.accurateSelection = false
-    this.input = new Input(this)
     this.options.keymaps.forEach(map => this.addKeymap(map, -100))
 
     this.options.plugins.forEach(plugin => plugin.attach(this))

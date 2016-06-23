@@ -78,11 +78,8 @@ exports.childContainer = childContainer
 // : (ProseMirror, number) → {node: DOMNode, offset: number}
 // Find the DOM node and offset into that node that the given document
 // position refers to.
-function DOMFromPos(pm, pos, loose) {
-  if (!loose && pm.operation && pm.doc != pm.operation.doc)
-    throw new RangeError("Resolving a position in an outdated DOM structure")
-
-  let container = pm.content, offset = pos
+function DOMFromPos(view, pos, loose) {
+  let container = view.content, offset = pos
   for (;;) {
     for (let child = container.firstChild, i = 0;; child = child.nextSibling, i++) {
       if (!child) {
@@ -116,8 +113,8 @@ exports.DOMFromPos = DOMFromPos
 // the top. This is needed in domchange.js, when there is an arbitrary
 // DOM change somewhere in our document, and we can no longer rely on
 // the DOM structure around the selection.
-function DOMFromPosFromEnd(pm, pos) {
-  let container = pm.content, dist = (pm.operation ? pm.operation.doc : pm.doc).content.size - pos
+function DOMFromPosFromEnd(view, pos) {
+  let container = view.content, dist = view.state.doc.content.size - pos
   for (;;) {
     for (let child = container.lastChild, i = container.childNodes.length;; child = child.previousSibling, i--) {
       if (!child) return {node: container, offset: i}
@@ -144,8 +141,8 @@ function DOMFromPosFromEnd(pm, pos) {
 exports.DOMFromPosFromEnd = DOMFromPosFromEnd
 
 // : (ProseMirror, number) → DOMNode
-function DOMAfterPos(pm, pos) {
-  let {node, offset} = DOMFromPos(pm, pos)
+function DOMAfterPos(view, pos) {
+  let {node, offset} = DOMFromPos(view, pos)
   if (node.nodeType != 1 || offset == node.childNodes.length)
     throw new RangeError("No node after pos " + pos)
   return node.childNodes[offset]
@@ -177,11 +174,10 @@ function windowRect() {
           top: 0, bottom: window.innerHeight}
 }
 
-function scrollIntoView(pm, pos) {
-  if (!pos) pos = pm.sel.range.head || pm.sel.range.from
-  let coords = coordsAtPos(pm, pos)
-  for (let parent = pm.content;; parent = parent.parentNode) {
-    let {scrollThreshold, scrollMargin} = pm.options
+function scrollIntoView(view, pos) {
+  let coords = coordsAtPos(view, pos)
+  for (let parent = view.content;; parent = parent.parentNode) {
+    let {scrollThreshold, scrollMargin} = view.options
     let atBody = parent == document.body
     let rect = atBody ? windowRect() : parent.getBoundingClientRect()
     let moveX = 0, moveY = 0
@@ -265,9 +261,9 @@ function targetKludge(dom, coords) {
 }
 
 // Given an x,y position on the editor, get the position in the document.
-function posAtCoords(pm, coords) {
+function posAtCoords(view, coords) {
   let elt = targetKludge(document.elementFromPoint(coords.left, coords.top + 1), coords)
-  if (!contains(pm.content, elt)) return null
+  if (!contains(view.content, elt)) return null
 
   let {node, offset} = findOffsetInNode(elt, coords), bias = -1
   if (node.nodeType == 1 && !node.firstChild) {
@@ -294,8 +290,8 @@ function singleRect(object, bias) {
 // : (ProseMirror, number) → ClientRect
 // Given a position in the document model, get a bounding box of the
 // character at that position, relative to the window.
-function coordsAtPos(pm, pos) {
-  let {node, offset} = DOMFromPos(pm, pos)
+function coordsAtPos(view, pos) {
+  let {node, offset} = DOMFromPos(view, pos)
   let side, rect
   if (node.nodeType == 3) {
     if (offset < node.nodeValue.length) {
