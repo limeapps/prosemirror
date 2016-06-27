@@ -1,9 +1,9 @@
 const Keymap = require("browserkeymap")
 
-const {Selection, verticalMotionLeavesTextblock, NodeSelection, TextSelection} = require("./selection")
+const {Selection, NodeSelection, TextSelection} = require("../selection")
 const browser = require("../util/browser")
 
-function nothing() {}
+function nothing() { return true }
 
 function moveSelectionBlock(pm, dir) {
   let {$from, $to, node} = pm.selection
@@ -59,10 +59,8 @@ function selectNodeVertically(pm, dir) {
   if (!empty && !node) return false
 
   let leavingTextblock = true, $start = dir < 0 ? $from : $to
-  if (!node || node.isInline) {
-    pm.flush() // verticalMotionLeavesTextblock needs an up-to-date DOM
-    leavingTextblock = verticalMotionLeavesTextblock(pm, $start, dir)
-  }
+  if (!node || node.isInline)
+    leavingTextblock = pm.view.verticalMotionLeavesTextblock(dir)
 
   if (leavingTextblock) {
     let next = moveSelectionBlock(pm, dir)

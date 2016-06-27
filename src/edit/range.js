@@ -84,7 +84,7 @@ class RangeStore {
     this.sorted.insert({type: "open", at: range.from, range: range})
     this.sorted.insert({type: "close", at: range.to, range: range})
     if (range.options.className)
-      this.pm.markRangeDirty(range.from, range.to)
+      this.pm.view.markRangeDirty(range.from, range.to, this.pm.doc)
   }
 
   removeRange(range) {
@@ -94,7 +94,7 @@ class RangeStore {
       this.sorted.remove(range.from, range)
       this.sorted.remove(range.to, range)
       if (range.options.className)
-        this.pm.markRangeDirty(range.from, range.to)
+        this.pm.view.markRangeDirty(range.from, range.to, this.pm.doc)
       range.remove()
     }
   }

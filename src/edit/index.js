@@ -4,8 +4,5 @@
 // and interact with when using the editor.
 
 exports.ProseMirror = require("./main").ProseMirror
-;({Selection: exports.Selection, TextSelection: exports.TextSelection, NodeSelection: exports.NodeSelection} = require("./selection"))
-;({MarkedRange: exports.MarkedRange} = require("./range"))
-;({Plugin: exports.Plugin} = require("./plugin"))
-
-exports.Keymap = require("browserkeymap")
+exports.MarkedRange = require("./range").MarkedRange
+exports.Plugin = require("./plugin").Plugin

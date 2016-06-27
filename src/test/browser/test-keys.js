@@ -3,7 +3,7 @@ const {doc, p} = require("../build")
 const {cmp, is} = require("../cmp")
 const {defTest} = require("../tests")
 
-const {Keymap} = require("../../edit")
+const Keymap = require("browserkeymap")
 
 function trace(prop) { return pm => pm.cached[prop] = (pm.cached[prop] || 0) + 1 }
 

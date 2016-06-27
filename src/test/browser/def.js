@@ -8,7 +8,7 @@ let tempPMs = null
 function tempEditors(options) {
   let space = document.querySelector("#workspace")
   if (tempPMs) {
-    tempPMs.forEach(pm => space.removeChild(pm.wrapper))
+    tempPMs.forEach(pm => space.removeChild(pm.view.wrapper))
     tempPMs = null
   }
   return tempPMs = options.map(options => {

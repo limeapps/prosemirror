@@ -194,9 +194,9 @@ exports.SelectField = SelectField
 function openPrompt(pm, content, options) {
   let button = elt("button", {class: "ProseMirror-prompt-close"})
   let wrapper = elt("div", {class: "ProseMirror-prompt"}, content, button)
-  let outerBox = pm.wrapper.getBoundingClientRect()
+  let outerBox = pm.view.wrapper.getBoundingClientRect()
 
-  pm.wrapper.appendChild(wrapper)
+  pm.view.wrapper.appendChild(wrapper)
   if (options && options.pos) {
     wrapper.style.left = (options.pos.left - outerBox.left) + "px"
     wrapper.style.top = (options.pos.top - outerBox.top) + "px"

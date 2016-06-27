@@ -1,6 +1,6 @@
 const {Fragment} = require("../model")
 const {Transform, insertPoint} = require("../transform")
-const {Selection} = require("./selection")
+const {Selection} = require("../selection")
 
 const applyAndScroll = {scrollIntoView: true}
 
@@ -62,7 +62,7 @@ class EditorTransform extends Transform {
     let {empty, $from, $to, from, to, node: selNode} = this.selection
 
     if (node && node.isInline && inheritMarks !== false)
-      node = node.mark(empty ? this.pm.input.storedMarks : this.doc.marksAt(from))
+      node = node.mark(empty ? this.pm.storedMarks : this.doc.marksAt(from))
     let fragment = Fragment.from(node)
 
     if (selNode && selNode.isTextblock && node && node.isInline) {
@@ -88,6 +88,7 @@ class EditorTransform extends Transform {
 
     this.replaceWith(from, to, fragment)
     let map = this.maps[this.maps.length - 1]
+    console.log("resolve", to, map.map(to))
     this.setSelection(Selection.findNear(this.doc.resolve(map.map(to))))
     return this
   }

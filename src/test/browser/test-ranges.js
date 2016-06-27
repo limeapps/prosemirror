@@ -65,19 +65,19 @@ test("stay_when_empty", pm => {
 
 test("add_class_simple", pm => {
   let range = pm.markRange(2, 5, {className: "foo"})
-  pm.flush()
-  cmp(pm.content.querySelector(".foo").textContent, "ell")
+  pm.updateView()
+  cmp(pm.view.content.querySelector(".foo").textContent, "ell")
   pm.removeRange(range)
-  pm.flush()
-  cmp(pm.content.querySelector(".foo"), null)
+  pm.updateView()
+  cmp(pm.view.content.querySelector(".foo"), null)
 })
 
 test("add_class_messy", pm => {
   let big = doc(hr, blockquote(p(), hr, ul(li(p("a"))), p("h<a>ello")), p("y<b>ou"))
   pm.setDoc(big)
   pm.markRange(big.tag.a, big.tag.b, {className: "foo"})
-  pm.flush()
-  let foos = pm.content.querySelectorAll(".foo")
+  pm.updateView()
+  let foos = pm.view.content.querySelectorAll(".foo")
   cmp(foos.length, 2)
   cmpStr(foos[0].textContent, "ello")
   cmpStr(foos[1].textContent, "y")
@@ -85,13 +85,13 @@ test("add_class_messy", pm => {
 
 test("add_class_multi_block", pm => {
   let range = pm.markRange(2, 19, {className: "foo"})
-  pm.flush()
-  let found = pm.content.querySelectorAll(".foo")
+  pm.updateView()
+  let found = pm.view.content.querySelectorAll(".foo")
   cmp(found.length, 3)
   cmp(found[0].textContent, "ne")
   cmp(found[1].textContent, "two")
   cmp(found[2].textContent, "thre")
   pm.removeRange(range)
-  pm.flush()
-  cmp(pm.content.querySelector(".foo"), null)
+  pm.updateView()
+  cmp(pm.view.content.querySelector(".foo"), null)
 }, {doc: doc(p("one"), ul(li(p("two")), li(p("three"))))})

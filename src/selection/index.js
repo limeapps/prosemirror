@@ -78,6 +78,23 @@ class Selection {
   static findAtEnd(doc, textOnly) {
     return findSelectionIn(doc, doc, doc.content.size, doc.childCount, -1, textOnly)
   }
+
+  static between($anchor, $head, bias) {
+    let found = Selection.findNear($head, bias)
+    if (found instanceof TextSelection) {
+      let nearAnchor = Selection.findFrom($anchor, $anchor.pos > found.to ? -1 : 1, true)
+      found = new TextSelection(nearAnchor.$anchor, found.$head)
+    } else if ($anchor.pos < found.from || $anchor.pos > found.to) {
+      // If head falls on a node, but anchor falls outside of it, create
+      // a text selection between them
+      let inv = $anchor.pos > found.to
+      let foundAnchor = Selection.findFrom($anchor, inv ? -1 : 1, true)
+      let foundHead = Selection.findFrom(inv ? found.$from : found.$to, inv ? 1 : -1, true)
+      if (foundAnchor && foundHead)
+        found = new TextSelection(foundAnchor.$anchor, foundHead.$head)
+    }
+    return found
+  }
 }
 exports.Selection = Selection
 

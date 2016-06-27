@@ -46,10 +46,10 @@ test("read", pm => {
     pm.sel.readFromDOM()
     let sel = pm.selection
     cmp(sel.head == null ? sel.from : sel.head, expected, comment)
-    pm.flush()
+    pm.updateView()
   }
-  let one = findTextNode(pm.content, "one")
-  let two = findTextNode(pm.content, "two")
+  let one = findTextNode(pm.view.content, "one")
+  let two = findTextNode(pm.view.content, "two")
   test(one, 0, 1, "force 0:0")
   test(one, 1, 2, "force 0:1")
   test(one, 3, 4, "force 0:3")
@@ -58,10 +58,10 @@ test("read", pm => {
   test(two, 0, 8, "force 1:0")
   test(two, 3, 11, "force 1:3")
   test(two.parentNode, 1, 11, "force :1 from two")
-  test(pm.content, 1, 4, "force :1")
-  test(pm.content, 1, 5, "force :1")
-  test(pm.content, 2, 8, "force :2")
-  test(pm.content, 3, 11, "force :3")
+  test(pm.view.content, 1, 4, "force :1")
+  test(pm.view.content, 1, 5, "force :1")
+  test(pm.view.content, 2, 8, "force :2")
+  test(pm.view.content, 3, 11, "force :3")
 }, {
   doc: doc(p("one"), hr, blockquote(p("two")))
 })
@@ -84,13 +84,13 @@ test("set", pm => {
   if (!document.hasFocus()) return
   function test(pos, node, offset) {
     pm.setTextSelection(pos)
-    pm.flush()
+    pm.updateView()
     let sel = getSel()
     cmp(sel.node, node, pos)
     cmp(sel.offset, offset, pos)
   }
-  let one = findTextNode(pm.content, "one")
-  let two = findTextNode(pm.content, "two")
+  let one = findTextNode(pm.view.content, "one")
+  let two = findTextNode(pm.view.content, "two")
   pm.focus()
   test(1, one, 0)
   test(2, one, 1)
@@ -146,7 +146,7 @@ test("coords_cornercases", pm => {
     let found = pm.posAtCoords(coords)
     cmp(found, pos)
     pm.setTextSelection(pos)
-    pm.flush()
+    pm.updateView()
   })
 }, {
   doc: doc(p("one", em("two", strong("three"), img), br, code("foo")), p())

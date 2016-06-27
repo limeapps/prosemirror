@@ -1,12 +1,15 @@
 const {Subscription, PipelineSubscription, StoppableSubscription, DOMSubscription} = require("subscription")
 const {mapThrough} = require("../transform")
 const {Mark} = require("../model")
+const {ProseMirrorView} = require("../view")
+const {requestAnimationFrame, cancelAnimationFrame} = require("../util/dom") // FIXME only connection to the DOM we have -- move into view?
+const {TextSelection, NodeSelection, Selection} = require("../selection")
 
 const {parseOptions} = require("./options")
-const {SelectionState, TextSelection, NodeSelection, Selection, hasFocus} = require("./selection")
 const {RangeStore, MarkedRange} = require("./range")
 const {EditorTransform} = require("./transform")
-const {EditorScheduler, UpdateScheduler} = require("./update")
+const {UpdateScheduler} = require("./update")
+const {viewChannel} = require("./inputevent")
 
 // ;; This is the class used to represent instances of the editor. A
 // ProseMirror editor holds a [document](#Node) and a
@@ -82,6 +85,13 @@ class ProseMirror {
       // Dispatched for every node around a double click in the
       // editor, before `doubleClick` is dispatched.
       doubleClickOn: new StoppableSubscription,
+      // :: StoppableSubscription<(pos: number)>
+      // Dispatched when the editor is triple-clicked.
+      tripleClick: new StoppableSubscription,
+      // :: StoppableSubscription<(pos: number, node: Node, nodePos: number)>
+      // Dispatched for every node around a triple click in the
+      // editor, before `tripleClick` is dispatched.
+      tripleClickOn: new StoppableSubscription,
       // :: StoppableSubscription<(pos: number, node: Node)>
       // Dispatched when the context menu is opened on the editor.
       // Return a truthy value to indicate that you handled the event.
@@ -92,15 +102,6 @@ class ProseMirror {
       // return a modified version to manipulate it before it is inserted
       // into the document.
       transformPasted: new PipelineSubscription,
-      // :: PipelineSubscription<(text: string) → string>
-      // Dispatched when plain text is pasted. Handlers must return the given
-      // string or a transformed version of it.
-      transformPastedText: new PipelineSubscription,
-      // :: PipelineSubscription<(html: string) → string>
-      // Dispatched when html content is pasted or dragged into the editor.
-      // Handlers must return the given string or a transformed
-      // version of it.
-      transformPastedHTML: new PipelineSubscription,
       // :: Subscription<(transform: Transform, selectionBeforeTransform: Selection, options: Object)>
       // Signals that a (non-empty) transformation has been aplied to
       // the editor. Passes the `Transform`, the selection before the
@@ -119,13 +120,9 @@ class ProseMirror {
       // transform.
       filterTransform: new StoppableSubscription,
       // :: Subscription<()>
-      // Dispatched when the editor is about to [flush](#ProseMirror.flush)
-      // an update to the DOM.
-      flushing: new Subscription,
-      // :: Subscription<()>
       // Dispatched when the editor has finished
-      // [flushing](#ProseMirror.flush) an update to the DOM.
-      flush: new Subscription,
+      // [updating](#ProseMirror.updateView) its DOM view.
+      updatedView: new Subscription,
       // :: Subscription<()>
       // Dispatched when the editor redrew its document in the DOM.
       draw: new Subscription,
@@ -140,19 +137,29 @@ class ProseMirror {
     }
 
     this.setDocInner(opts.doc)
+    // :: Selection
+    // The current selection.
+    this.selection = Selection.findAtStart(this.doc)
+
+    this.storedMarks = null
+    this.on.selectionChange.add(() => this.storedMarks = null)
 
     // A namespace where plugins can store their state. See the `Plugin` class.
     this.plugin = Object.create(null)
-    this.cached = Object.create(null)
 
     // :: History A property into which a [history
     // plugin](#historyPlugin) may put a history implementation.
     this.history = null
 
-    this.operation = null
-    this.flushScheduled = null
-    this.centralScheduler = new EditorScheduler(this)
+    this.viewChannel = viewChannel(this)
+    this.view = new ProseMirrorView(opts.place, opts, this.doc, this.selection, this.viewChannel, this.ranges)
+    this.mapsSinceViewUpdate = []
+    this.docSetSinceViewUpdate = false
+    this.updateScheduled = null
+    this.scrollPosIntoView = null
+    this.requestFocus = false
 
+    this.keymaps = []
     this.options.keymaps.forEach(map => this.addKeymap(map, -100))
 
     this.options.plugins.forEach(plugin => plugin.attach(this))
@@ -161,13 +168,6 @@ class ProseMirror {
   // :: (string) → any
   // Get the value of the given [option](#edit_options).
   getOption(name) { return this.options[name] }
-
-  // :: Selection
-  // Get the current selection.
-  get selection() {
-    if (!this.accurateSelection) this.ensureOperation()
-    return this.sel.range
-  }
 
   // :: (number, ?number)
   // Set the selection to a [text selection](#TextSelection) from
@@ -192,8 +192,11 @@ class ProseMirror {
   // :: (Selection)
   // Set the selection to the given selection object.
   setSelection(selection) {
-    this.ensureOperation()
-    if (!selection.eq(this.sel.range)) this.sel.setAndSignal(selection)
+    if (!selection.eq(this.selection)) {
+      this.scheduleViewUpdate()
+      this.selection = selection
+      this.on.selectionChange.dispatch()
+    }
   }
 
   setDocInner(doc) {
@@ -209,20 +212,22 @@ class ProseMirror {
   setDoc(doc, sel) {
     if (!sel) sel = Selection.findAtStart(doc)
     this.on.beforeSetDoc.dispatch(doc, sel)
-    this.ensureOperation()
+    this.scheduleViewUpdate()
     this.setDocInner(doc)
-    this.operation.docSet = true
-    this.sel.set(sel, true)
+    this.selection = sel
+    this.docSetSinceViewUpdate = true
     this.on.setDoc.dispatch(doc, sel)
+    this.on.selectionChange.dispatch()
   }
 
   updateDoc(doc, mapping, selection) {
-    this.ensureOperation()
+    this.scheduleViewUpdate()
     this.ranges.transform(mapping)
-    this.operation.mappings.push(mapping)
+    this.mapsSinceViewUpdate.push(mapping)
     this.doc = doc
-    this.sel.setAndSignal(selection || this.sel.range.map(doc, mapping))
+    this.selection = selection || this.selection.map(doc, mapping)
     this.on.change.dispatch()
+    this.on.selectionChange.dispatch()
   }
 
   // :: EditorTransform
@@ -237,7 +242,7 @@ class ProseMirror {
   //
   // **`scrollIntoView`**: ?bool
   //   : When true, scroll the selection into view on the next
-  //     [redraw](#ProseMirror.flush).
+  //     [update](#ProseMirror.updateView).
   //
   // **`selection`**`: ?Selection`
   //   : A new selection to set after the transformation is applied.
@@ -269,31 +274,28 @@ class ProseMirror {
     return transform
   }
 
-  // : (?Object) → Operation
-  // Ensure that an operation has started.
-  ensureOperation(options) {
-    return this.operation || this.startOperation(options)
+  scheduleViewUpdate() {
+    if (this.updateScheduled == null)
+      this.updateScheduled = requestAnimationFrame(this.updateView.bind(this))
   }
 
-  // : (?Object) → Operation
-  // Start an operation and schedule a flush so that any effect of
-  // the operation shows up in the DOM.
-  startOperation(options) {
-    this.operation = new Operation(this, options)
-    if (!(options && options.readSelection === false) && this.sel.readFromDOM())
-      this.operation.sel = this.sel.range
-
-    if (this.flushScheduled == null)
-      this.flushScheduled = requestAnimationFrame(() => this.flush())
-    return this.operation
-  }
-
-  // Cancel any scheduled operation flush.
-  unscheduleFlush() {
-    if (this.flushScheduled != null) {
-      cancelAnimationFrame(this.flushScheduled)
-      this.flushScheduled = null
+  unscheduleViewUpdate() {
+    if (this.updateScheduled != null) {
+      cancelAnimationFrame(this.updateScheduled)
+      this.updateScheduled = null
     }
+  }
+
+  // :: ()
+  // Give the editor focus.
+  focus() {
+    this.scheduleViewUpdate()
+    this.requestFocus = true
+  }
+
+  // :: () → bool
+  hasFocus() {
+    return this.view.hasFocus()
   }
 
   // :: () → bool
@@ -306,36 +308,18 @@ class ProseMirror {
   // document ends up, immediately after changing the document.
   //
   // Returns true when it updated the document DOM.
-  flush() {
-    this.unscheduleFlush()
+  updateView() {
+    this.unscheduleViewUpdate()
 
-    if (!document.body.contains(this.wrapper) || !this.operation) return false
-    this.on.flushing.dispatch()
-
-    let op = this.operation, redrawn = false
-    if (!op) return false
-    if (op.composing) this.input.applyComposition()
-
-    this.operation = null
-    this.accurateSelection = true
-
-    if (op.doc != this.doc || this.dirtyNodes.size) {
-      redraw(this, this.dirtyNodes, this.doc, op.doc)
-      this.dirtyNodes.clear()
-      redrawn = true
+    let result = this.view.update(this.doc, this.selection, this.ranges, this.requestFocus, this.scrollPosIntoView)
+    if (result) {
+      this.scrollPosIntoView = null
+      this.mapsSinceViewUpdate.length = 0
+      this.docSetSinceViewUpdate = this.requestFocus = false
+      if (result.redrawn) this.on.draw.dispatch()
     }
-
-    if ((redrawn || !op.sel.eq(this.sel.range)) || op.focus)
-      this.sel.toDOM(op.focus)
-
-    // FIXME somehow schedule this relative to ui/update so that it
-    // doesn't cause extra layout
-    if (op.scrollIntoView !== false)
-      scrollIntoView(this, op.scrollIntoView)
-    if (redrawn) this.on.draw.dispatch()
-    this.on.flush.dispatch()
-    this.accurateSelection = false
-    return redrawn
+    this.on.updatedView.dispatch()
+    return !!result
   }
 
   // :: (Keymap, ?number)
@@ -346,7 +330,7 @@ class ProseMirror {
   // control when they are queried relative to other maps added like
   // this. Maps with a higher priority get queried first.
   addKeymap(map, priority = 0) {
-    let i = 0, maps = this.input.keymaps
+    let i = 0, maps = this.keymaps
     for (; i < maps.length; i++) if (maps[i].priority < priority) break
     maps.splice(i, 0, {map, priority})
   }
@@ -354,7 +338,7 @@ class ProseMirror {
   // :: (Keymap)
   // Remove the given keymap from the editor.
   removeKeymap(map) {
-    let maps = this.input.keymaps
+    let maps = this.keymaps
     for (let i = 0; i < maps.length; ++i) if (maps[i].map == map) {
       maps.splice(i, 1)
       return true
@@ -408,7 +392,7 @@ class ProseMirror {
   // [`removeActiveMark`](#ProseMirror.removeActiveMark), the updated
   // set is returned.
   activeMarks() {
-    return this.input.storedMarks || currentMarks(this)
+    return this.storedMarks || currentMarks(this)
   }
 
   // :: (Mark)
@@ -417,7 +401,7 @@ class ProseMirror {
   // selection isn't collapsed.
   addActiveMark(mark) {
     if (this.selection.empty) {
-      this.input.storedMarks = mark.addToSet(this.input.storedMarks || currentMarks(this))
+      this.storedMarks = mark.addToSet(this.storedMarks || currentMarks(this))
       this.on.activeMarkChange.dispatch()
     }
   }
@@ -426,25 +410,9 @@ class ProseMirror {
   // Remove any mark of the given type from the set of overidden active marks.
   removeActiveMark(markType) {
     if (this.selection.empty) {
-      this.input.storedMarks = markType.removeFromSet(this.input.storedMarks || currentMarks(this))
+      this.storedMarks = markType.removeFromSet(this.storedMarks || currentMarks(this))
       this.on.activeMarkChange.dispatch()
     }
-  }
-
-  // :: ()
-  // Give the editor focus.
-  focus() {
-    if (this.operation) this.operation.focus = true
-    else this.sel.toDOM(true)
-  }
-
-  // :: () → bool
-  // Query whether the editor has focus.
-  hasFocus() {
-    if (this.sel.range instanceof NodeSelection)
-      return document.activeElement == this.content
-    else
-      return hasFocus(this)
   }
 
   // :: ({top: number, left: number}) → ?number
@@ -482,35 +450,20 @@ class ProseMirror {
   // Find the screen coordinates (relative to top left corner of the
   // window) of the given document position.
   coordsAtPos(pos) {
-    this.flush()
-    return coordsAtPos(this, pos)
+    // FIXME provide a variant that overrides compositions?
+    if (this.view.composing) return null
+    // If the DOM has been changed, update the view so that we have a
+    // proper DOM to read
+    if (this.docSetSinceViewUpdate || this.view.domTouched) this.updateView()
+    return this.view.coordsAtPos(this, pos)
   }
 
   // :: (?number)
   // Scroll the given position, or the cursor position if `pos` isn't
   // given, into view.
   scrollIntoView(pos = null) {
-    this.ensureOperation()
-    this.operation.scrollIntoView = pos
-  }
-
-  markRangeDirty(from, to, doc = this.doc) {
-    this.ensureOperation()
-    let dirty = this.dirtyNodes
-    let $from = doc.resolve(from), $to = doc.resolve(to)
-    let same = $from.sameDepth($to)
-    for (let depth = 0; depth <= same; depth++) {
-      let child = $from.node(depth)
-      if (!dirty.has(child)) dirty.set(child, DIRTY_RESCAN)
-    }
-    let start = $from.index(same), end = $to.index(same) + (same == $to.depth && $to.atNodeBoundary ? 0 : 1)
-    let parent = $from.node(same)
-    for (let i = start; i < end; i++)
-      dirty.set(parent.child(i), DIRTY_REDRAW)
-  }
-
-  markAllDirty() {
-    this.dirtyNodes.set(this.doc, DIRTY_REDRAW)
+    this.scheduleViewUpdate()
+    this.scrollIntoPosView = pos == null ? this.selection.from : pos
   }
 
   // :: (string) → string
@@ -520,28 +473,6 @@ class ProseMirror {
     let trans = this.options.translate
     return trans ? trans(string) : string
   }
-
-  // :: (() -> ?() -> ?())
-  // Schedule a DOM update function to be called either the next time
-  // the editor is [flushed](#ProseMirror.flush), or if no flush happens
-  // immediately, after 200 milliseconds. This is used to synchronize
-  // DOM updates and read to prevent [DOM layout
-  // thrashing](http://eloquentjavascript.net/13_dom.html#p_nnTb9RktUT).
-  //
-  // Often, your updates will need to both read and write from the DOM.
-  // To schedule such access in lockstep with other modules, the
-  // function you give can return another function, which may return
-  // another function, and so on. The first call should _write_ to the
-  // DOM, and _not read_. If a _read_ needs to happen, that should be
-  // done in the function returned from the first call. If that has to
-  // be followed by another _write_, that should be done in a function
-  // returned from the second function, and so on.
-  scheduleDOMUpdate(f) { this.centralScheduler.set(f) }
-
-  // :: (() -> ?() -> ?())
-  // Cancel an update scheduled with `scheduleDOMUpdate`. Calling this
-  // with a function that is not actually scheduled is harmless.
-  unscheduleDOMUpdate(f) { this.centralScheduler.unset(f) }
 
   // :: ([Subscription], () -> ?()) → UpdateScheduler
   // Creates an update scheduler for this editor. `subscriptions`
@@ -555,18 +486,22 @@ class ProseMirror {
 exports.ProseMirror = ProseMirror
 
 function mappedPosAtCoords(pm, coords) {
-  // If the DOM has been changed, flush so that we have a proper DOM to read
-  if (pm.operation && (pm.dirtyNodes.size > 0 || pm.operation.composing || pm.operation.docSet))
-    pm.flush()
-  let result = posAtCoords(pm, coords)
+  // FIXME provide a variant that overrides compositions?
+  if (pm.view.composing) return null
+
+  // If the DOM has been changed, update the view so that we have a
+  // proper DOM to read
+  if (pm.docSetSinceViewUpdate || pm.view.domTouched) pm.updateView()
+
+  let result = pm.view.posAtCoords(coords)
   if (!result) return null
 
   // If there's an active operation, we need to map forward through
   // its changes to get a position that applies to the current
   // document
-  if (pm.operation)
-    return {pos: mapThrough(pm.operation.mappings, result.pos),
-            inside: result.inside == null ? null : mapThrough(pm.operation.mappings, result.inside)}
+  if (pm.mapsSinceViewUpdate.length)
+    return {pos: mapThrough(pm.mapsSinceViewUpdate, result.pos),
+            inside: result.inside == null ? null : mapThrough(pm.mapsSinceViewUpdate, result.inside)}
   else
     return result
 }
@@ -577,24 +512,3 @@ function currentMarks(pm) {
 }
 
 const nullOptions = {}
-
-// Operations are used to delay/batch DOM updates. When a change to
-// the editor state happens, it is not immediately flushed to the DOM,
-// but rather a call to `ProseMirror.flush` is scheduled using
-// `requestAnimationFrame`. An object of this class is stored in the
-// editor's `operation` property, and holds information about the
-// state at the start of the operation, which can be used to determine
-// the minimal DOM update needed. It also stores information about
-// whether a focus needs to happen on flush, and whether something
-// needs to be scrolled into view.
-class Operation {
-  constructor(pm, options) {
-    this.doc = pm.doc
-    this.docSet = false
-    this.sel = (options && options.selection) || pm.sel.range
-    this.scrollIntoView = false
-    this.focus = false
-    this.mappings = []
-    this.composing = null
-  }
-}
