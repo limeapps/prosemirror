@@ -43,7 +43,7 @@ test("read", pm => {
   if (!document.hasFocus()) return
   function test(node, offset, expected, comment) {
     setSel(node, offset)
-    pm.sel.readFromDOM()
+    pm.view.selectionReader.readFromDOM()
     let sel = pm.selection
     cmp(sel.head == null ? sel.from : sel.head, expected, comment)
     pm.updateView()
@@ -110,9 +110,9 @@ test("change_event", pm => {
   pm.setTextSelection(1)
   cmp(received, 2, "changed back")
   pm.setDoc(doc(p("hi")))
-  cmp(received, 2, "new doc")
+  cmp(received, 3, "new doc")
   pm.tr.insertText(3, "you").apply()
-  cmp(received, 3, "doc changed")
+  cmp(received, 4, "doc changed")
 }, {doc: doc(p("one"))})
 
 test("coords_order", pm => {
@@ -190,7 +190,7 @@ test("replace_with_block", pm => {
 })
 
 test("type_over_hr", pm => {
-  pm.input.insertText(pm.selection.from, pm.selection.to, "x")
+  pm.view.channel.insertText({text: "x"})
   cmpNode(pm.doc, doc(p("a"), p("x"), p("b")))
   cmp(pm.selection.head, 5)
   cmp(pm.selection.anchor, 5)
@@ -198,8 +198,9 @@ test("type_over_hr", pm => {
 
 test("pos_at_coords_after_wrapped", pm => {
   let top = pm.coordsAtPos(1), pos = 1, end
-  for (;;) {
+  for (let i = 0; i < 100; i++) {
     pm.tr.typeText("abc def ghi ").apply()
+    pm.updateView()
     pos += 12
     end = pm.coordsAtPos(pos)
     if (end.bottom > top.bottom + 4) break

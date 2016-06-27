@@ -5,7 +5,7 @@ const {defTest} = require("../tests")
 
 const Keymap = require("browserkeymap")
 
-function trace(prop) { return pm => pm.cached[prop] = (pm.cached[prop] || 0) + 1 }
+function trace(prop) { return pm => pm.plugin[prop] = (pm.plugin[prop] || 0) + 1 }
 
 const extraMap = new Keymap({
   "'B'": trace("b"),
@@ -21,16 +21,16 @@ test("basic", pm => {
   pm.addKeymap(extraMap)
   dispatch(pm, "'B'")
   dispatch(pm, "'B'")
-  cmp(pm.cached.b, 2)
+  cmp(pm.plugin.b, 2)
 })
 
 test("multi", pm => {
   pm.addKeymap(extraMap)
   dispatch(pm, "Ctrl-X")
-  dispatch(pm, "C")
+  dispatch(pm, "Ctrl-X C")
   dispatch(pm, "Ctrl-X")
-  dispatch(pm, "C")
-  cmp(pm.cached.c, 2)
+  dispatch(pm, "Ctrl-X C")
+  cmp(pm.plugin.c, 2)
 })
 
 test("addKeymap", pm => {
@@ -38,12 +38,12 @@ test("addKeymap", pm => {
   let map = new Keymap({"Ctrl-A": trace("a2")})
   pm.addKeymap(map, 60)
   dispatch(pm, "Ctrl-A")
-  cmp(pm.cached.a, undefined)
-  cmp(pm.cached.a2, 1)
+  cmp(pm.plugin.a, undefined)
+  cmp(pm.plugin.a2, 1)
   pm.removeKeymap(map)
   dispatch(pm, "Ctrl-A")
-  cmp(pm.cached.a, 1)
-  cmp(pm.cached.a2, 1)
+  cmp(pm.plugin.a, 1)
+  cmp(pm.plugin.a2, 1)
 })
 
 test("addKeymap_bottom", pm => {
@@ -53,13 +53,13 @@ test("addKeymap_bottom", pm => {
   pm.addKeymap(mapTop, 60)
   pm.addKeymap(mapBot, 40)
   dispatch(pm, "Ctrl-A")
-  cmp(pm.cached.a2, 1)
-  cmp(pm.cached.a3, undefined)
+  cmp(pm.plugin.a2, 1)
+  cmp(pm.plugin.a3, undefined)
   dispatch(pm, "Ctrl-D")
-  cmp(pm.cached.d, 1)
+  cmp(pm.plugin.d, 1)
   pm.removeKeymap(mapBot)
   dispatch(pm, "Ctrl-D")
-  cmp(pm.cached.d, 1)
+  cmp(pm.plugin.d, 1)
 })
 
 defTest("keys_add_inconsistent", () => {

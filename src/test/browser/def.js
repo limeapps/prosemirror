@@ -42,5 +42,5 @@ function namespace(space, defaults) {
 }
 exports.namespace = namespace
 
-function dispatch(pm, key) { pm.input.dispatchKey(key) }
+function dispatch(pm, key) { pm.view.channel.key({keyName: key}) }
 exports.dispatch = dispatch

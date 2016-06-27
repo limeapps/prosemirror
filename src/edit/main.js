@@ -151,8 +151,7 @@ class ProseMirror {
     // plugin](#historyPlugin) may put a history implementation.
     this.history = null
 
-    this.viewChannel = viewChannel(this)
-    this.view = new ProseMirrorView(opts.place, opts, this.doc, this.selection, this.viewChannel, this.ranges)
+    this.view = new ProseMirrorView(opts.place, opts, this.doc, this.selection, viewChannel(this), this.ranges)
     this.mapsSinceViewUpdate = []
     this.docSetSinceViewUpdate = false
     this.updateScheduled = null
@@ -425,27 +424,6 @@ class ProseMirror {
     return result && result.pos
   }
 
-  // :: ({top: number, left: number}) → ?{pos: number, inside: [{pos: number, node: Node}]}
-  // If the given coordinates fall within the editable content, this
-  // method will return the document position that corresponds to
-  // those coordinates, along with a stack of nodes and their
-  // positions (excluding the top node) that the coordinates fall
-  // into.
-  contextAtCoords(coords) {
-    let result = mappedPosAtCoords(this, coords)
-    if (!result) return null
-
-    let $pos = this.doc.resolve(result.inside == null ? result.pos : result.inside), inside = []
-    for (let i = 1; i <= $pos.depth; i++)
-      inside.push({pos: $pos.before(i), node: $pos.node(i)})
-    if (result.inside != null) {
-      let after = $pos.nodeAfter
-      if (after && !after.isText && after.type.isLeaf)
-        inside.push({pos: result.inside, node: after})
-    }
-    return {pos: result.pos, inside}
-  }
-
   // :: (number) → {top: number, left: number, bottom: number}
   // Find the screen coordinates (relative to top left corner of the
   // window) of the given document position.
@@ -455,7 +433,7 @@ class ProseMirror {
     // If the DOM has been changed, update the view so that we have a
     // proper DOM to read
     if (this.docSetSinceViewUpdate || this.view.domTouched) this.updateView()
-    return this.view.coordsAtPos(this, pos)
+    return this.view.coordsAtPos(pos)
   }
 
   // :: (?number)

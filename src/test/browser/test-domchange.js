@@ -84,24 +84,21 @@ test("detect_enter", pm => {
 
 test("composition_simple", pm => {
   findTextNode(pm.view.content, "hello").nodeValue = "hellox"
-  pm.startOperation()
-  readCompositionChange(pm, 0)
+  readCompositionChange(pm.view, 0)
   cmpNode(pm.doc, doc(p("hellox")))
 })
 
 test("composition_del_inside_markup", pm => {
   pm.updateView()
   findTextNode(pm.view.content, "cd").nodeValue = "c"
-  pm.startOperation()
-  readCompositionChange(pm, 0)
+  readCompositionChange(pm.view, 0)
   cmpNode(pm.doc, doc(p("a", em("b", img, strong("c")), "e")))
 }, {doc: doc(p("a", em("b", img, strong("cd<a>")), "e"))})
 
 test("composition_type_inside_markup", pm => {
   pm.updateView()
   findTextNode(pm.view.content, "cd").nodeValue = "cdxy"
-  pm.startOperation()
-  readCompositionChange(pm, 0)
+  readCompositionChange(pm.view, 0)
   cmpNode(pm.doc, doc(p("a", em("b", img, strong("cdxy")), "e")))
 }, {doc: doc(p("a", em("b", img, strong("cd<a>")), "e"))})
 
@@ -109,8 +106,7 @@ test("composition_type_ambiguous", pm => {
   pm.updateView()
   pm.addActiveMark(pm.schema.marks.strong.create())
   findTextNode(pm.view.content, "foo").nodeValue = "fooo"
-  pm.startOperation()
-  readCompositionChange(pm, 0)
+  readCompositionChange(pm.view, 0)
   cmpNode(pm.doc, doc(p("fo", strong("o"), "o")))
 }, {doc: doc(p("fo<a>o"))})
 
