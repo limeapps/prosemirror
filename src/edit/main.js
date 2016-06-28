@@ -414,25 +414,32 @@ class ProseMirror {
     }
   }
 
-  // :: ({top: number, left: number}) → ?number
+  // :: ({top: number, left: number}, ?bool) → ?number
   // If the given coordinates (which should be relative to the top
   // left corner of the window—not the page) fall within the editable
   // content, this method will return the document position that
   // corresponds to those coordinates.
-  posAtCoords(coords) {
-    let result = mappedPosAtCoords(this, coords)
-    return result && result.pos
+  posAtCoords(coords, force = false) {
+    if (!maybeForceUpdate(this, force)) return null
+
+    let result = this.view.posAtCoords(coords)
+    if (!result) return null
+
+    // If there's been changes since the last view update, we need to
+    // map forward through those to get a position that applies to the
+    // current document
+    if (this.mapsSinceViewUpdate.length)
+      return mapThrough(this.mapsSinceViewUpdate, result.pos)
+    else
+      return result.pos
   }
 
   // :: (number) → {top: number, left: number, bottom: number}
   // Find the screen coordinates (relative to top left corner of the
   // window) of the given document position.
-  coordsAtPos(pos) {
-    // FIXME provide a variant that overrides compositions?
-    if (this.view.composing) return null
-    // If the DOM has been changed, update the view so that we have a
-    // proper DOM to read
-    if (this.docSetSinceViewUpdate || this.view.domTouched) this.updateView()
+  coordsAtPos(pos, force = false) {
+    if (!maybeForceUpdate(this, force)) return null
+    if (this.mapsSinceViewUpdate.length) this.updateView()
     return this.view.coordsAtPos(pos)
   }
 
@@ -463,30 +470,21 @@ class ProseMirror {
 }
 exports.ProseMirror = ProseMirror
 
-function mappedPosAtCoords(pm, coords) {
-  // FIXME provide a variant that overrides compositions?
-  if (pm.view.composing) return null
-
-  // If the DOM has been changed, update the view so that we have a
-  // proper DOM to read
-  if (pm.docSetSinceViewUpdate || pm.view.domTouched) pm.updateView()
-
-  let result = pm.view.posAtCoords(coords)
-  if (!result) return null
-
-  // If there's an active operation, we need to map forward through
-  // its changes to get a position that applies to the current
-  // document
-  if (pm.mapsSinceViewUpdate.length)
-    return {pos: mapThrough(pm.mapsSinceViewUpdate, result.pos),
-            inside: result.inside == null ? null : mapThrough(pm.mapsSinceViewUpdate, result.inside)}
-  else
-    return result
-}
-
 function currentMarks(pm) {
   let head = pm.selection.head
   return head == null ? Mark.none : pm.doc.marksAt(head)
+}
+
+function maybeForceUpdate(pm, force) {
+  if (pm.view.pendingDOMChange()) {
+    if (force) pm.view.forceDOMChange()
+    else return false
+  } else if (pm.docSetSinceViewUpdate) {
+    // If the document has been replaced since the view was updated,
+    // update it immediately
+    pm.updateView()
+  }
+  return true
 }
 
 const nullOptions = {}
