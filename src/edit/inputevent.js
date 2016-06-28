@@ -1,4 +1,4 @@
-const {MapThrough} = require("../transform")
+const {MapThrough, Remapping} = require("../transform")
 const Keymap = require("browserkeymap")
 const {Selection} = require("../selection")
 
@@ -44,7 +44,7 @@ const handlers = {
     }
   },
 
-  insertText(pm, {from, to, text}, map) {
+  insertText(pm, {from, to, text, newSelection}, map) {
     if (from == null) {
       ;({from, to} = pm.selection)
     } else if (map) {
@@ -55,6 +55,7 @@ const handlers = {
     let marks = pm.storedMarks || pm.doc.marksAt(from)
     let tr = pm.tr.replaceWith(from, to, text ? pm.schema.text(text, marks) : null)
     tr.setSelection(Selection.findNear(tr.doc.resolve(tr.map(to)), -1))
+    if (newSelection) applyNewSelection(tr, newSelection, map)
     tr.applyAndScroll()
     if (text) pm.on.textInput.dispatch(text)
     return handled
@@ -133,29 +134,32 @@ const handlers = {
   }
 }
 
-function doReplace(pm, {from, to, slice}, map, selectContent) {
+function doReplace(pm, {from, to, slice, newSelection}, map, selectContent) {
   if (map) {
     from = map.map(from, 1)
     to = Math.max(from, map.map(to, -1))
   }
   let tr = pm.tr.replace(from, to, pm.on.transformPasted.dispatch(slice))
   tr.setSelection(Selection.findNear(tr.doc.resolve(tr.map(to)), -1))
+  if (newSelection) applyNewSelection(tr, newSelection, map)
   tr.applyAndScroll()
 
-  if (selectContent) {
-    let found
-    if (slice.content.childCount == 1 && slice.openLeft == 0 && slice.openRight == 0 &&
-        slice.content.child(0).type.selectable &&
-        (found = pm.doc.nodeAt(from)) && found.sameMarkup(slice.content.child(0))) {
-      pm.setNodeSelection(from)
-    } else {
-      let left = Selection.findFrom(pm.doc.resolve(from), 1, true)
-      let right = Selection.findFrom(pm.doc.resolve(tr.map(to)), -1, true)
-      if (left && right) pm.setTextSelection(left.from, right.to)
-    }
-  }
+  if (selectContent)
+    pm.setSelection(Selection.between(from, tr.map(to)))
 
   return handled
+}
+
+function applyNewSelection(tr, {anchor, head}, map) {
+  if (map) {
+    let remap = new Remapping([], [map])
+    for (let i = 0; i < tr.maps.length; i++)
+      remap.addToBack(tr.maps[i], remap.addToFront(tr.maps[i].invert()))
+    anchor = remap.map(anchor)
+    head = remap.map(head)
+  }
+
+  tr.setSelection(Selection.between(tr.doc.resolve(anchor), tr.doc.resolve(head)))
 }
 
 function mapMousePos(pm, map, pos, inside) {
