@@ -54,7 +54,7 @@ const handlers = {
     }
     let marks = pm.storedMarks || pm.doc.marksAt(from)
     let tr = pm.tr.replaceWith(from, to, text ? pm.schema.text(text, marks) : null)
-    tr.setSelection(Selection.findNear(tr.doc.resolve(tr.map(to)), -1))
+    tr.setSelection(Selection.near(tr.doc.resolve(tr.map(to)), -1))
     if (newSelection) applyNewSelection(tr, newSelection, map)
     tr.applyAndScroll()
     if (text) pm.on.textInput.dispatch(text)
@@ -140,7 +140,7 @@ function doReplace(pm, {from, to, slice, newSelection}, map, selectContent) {
     to = Math.max(from, map.map(to, -1))
   }
   let tr = pm.tr.replace(from, to, pm.on.transformPasted.dispatch(slice))
-  tr.setSelection(Selection.findNear(tr.doc.resolve(tr.map(to)), -1))
+  tr.setSelection(Selection.near(tr.doc.resolve(tr.map(to)), -1))
   if (newSelection) applyNewSelection(tr, newSelection, map)
   tr.applyAndScroll()
 

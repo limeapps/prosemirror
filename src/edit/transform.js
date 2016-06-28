@@ -88,7 +88,7 @@ class EditorTransform extends Transform {
 
     this.replaceWith(from, to, fragment)
     let map = this.maps[this.maps.length - 1]
-    this.setSelection(Selection.findNear(this.doc.resolve(map.map(to))))
+    this.setSelection(Selection.near(this.doc.resolve(map.map(to))))
     return this
   }
 

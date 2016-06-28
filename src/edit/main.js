@@ -139,7 +139,7 @@ class ProseMirror {
     this.setDocInner(opts.doc)
     // :: Selection
     // The current selection.
-    this.selection = Selection.findAtStart(this.doc)
+    this.selection = Selection.atStart(this.doc)
 
     this.storedMarks = null
     this.on.selectionChange.add(() => this.storedMarks = null)
@@ -209,7 +209,7 @@ class ProseMirror {
   // :: (Node, ?Selection)
   // Set the editor's content, and optionally include a new selection.
   setDoc(doc, sel) {
-    if (!sel) sel = Selection.findAtStart(doc)
+    if (!sel) sel = Selection.atStart(doc)
     this.on.beforeSetDoc.dispatch(doc, sel)
     this.scheduleViewUpdate()
     this.setDocInner(doc)

@@ -57,7 +57,7 @@ class Selection {
   // Find a valid cursor or leaf node selection near the given
   // position. Searches forward first by default, but if `bias` is
   // negative, it will search backwards first.
-  static findNear($pos, bias = 1) {
+  static near($pos, bias = 1) {
     let result = this.findFrom($pos, bias) || this.findFrom($pos, -bias)
     if (!result) throw new RangeError("Searching for selection in invalid document " + $pos.node(0))
     return result
@@ -67,7 +67,7 @@ class Selection {
   // Find the cursor or leaf node selection closest to the start of
   // the given document. When `textOnly` is true, only consider cursor
   // selections.
-  static findAtStart(doc, textOnly) {
+  static atStart(doc, textOnly) {
     return findSelectionIn(doc, doc, 0, 0, 1, textOnly)
   }
 
@@ -75,12 +75,12 @@ class Selection {
   // Find the cursor or leaf node selection closest to the end of
   // the given document. When `textOnly` is true, only consider cursor
   // selections.
-  static findAtEnd(doc, textOnly) {
+  static atEnd(doc, textOnly) {
     return findSelectionIn(doc, doc, doc.content.size, doc.childCount, -1, textOnly)
   }
 
   static between($anchor, $head, bias) {
-    let found = Selection.findNear($head, bias)
+    let found = Selection.near($head, bias)
     if (found instanceof TextSelection) {
       let nearAnchor = Selection.findFrom($anchor, $anchor.pos > found.to ? -1 : 1, true)
       found = new TextSelection(nearAnchor.$anchor, found.$head)
@@ -132,7 +132,7 @@ class TextSelection extends Selection {
 
   map(doc, mapping) {
     let $head = doc.resolve(mapping.map(this.head))
-    if (!$head.parent.isTextblock) return Selection.findNear($head)
+    if (!$head.parent.isTextblock) return Selection.near($head)
     let $anchor = doc.resolve(mapping.map(this.anchor))
     return new TextSelection($anchor.parent.isTextblock ? $anchor : $head, $head)
   }
@@ -147,7 +147,7 @@ class TextSelection extends Selection {
 
   static fromToken(token, doc) {
     let $head = doc.resolve(token.b)
-    if (!$head.parent.isTextblock) return Selection.findNear($head)
+    if (!$head.parent.isTextblock) return Selection.near($head)
     let $anchor = doc.resolve(token.a)
     return new TextSelection($anchor.parent.isTextblock ? $anchor : $head, $head)
   }
@@ -180,7 +180,7 @@ class NodeSelection extends Selection {
     let node = $from.nodeAfter
     if (node && to == $from.pos + node.nodeSize && node.type.selectable)
       return new NodeSelection($from)
-    return Selection.findNear($from)
+    return Selection.near($from)
   }
 
   get token() {
@@ -195,7 +195,7 @@ class NodeSelection extends Selection {
     let $from = doc.resolve(token.a), node = $from.nodeAfter
     if (node && token.b == token.a + node.nodeSize && node.type.selectable)
       return new NodeSelection($from)
-    return Selection.findNear($from)
+    return Selection.near($from)
   }
 }
 exports.NodeSelection = NodeSelection
