@@ -34,9 +34,7 @@ class EditorTransform extends Transform {
   // [`setSelection`](#EditorTransform.setSelection).
   get selection() {
     if (this.curSelectionAt < this.steps.length) {
-      if (this.curSelectionAt) this.mapping.mapFrom = this.curSelectionAt
-      this.curSelection = this.curSelection.map(this.doc, this.mapping)
-      if (this.curSelectionAt) this.mapping.mapFrom = 0
+      this.curSelection = this.curSelection.map(this.doc, this.mapping.slice(this.curSelectionAt))
       this.curSelectionAt = this.steps.length
     }
     return this.curSelection
