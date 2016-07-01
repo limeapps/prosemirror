@@ -1,4 +1,4 @@
-const {MapThrough, Remapping} = require("../transform")
+const {Remapping} = require("../transform")
 const Keymap = require("browserkeymap")
 const {Selection} = require("../selection")
 
@@ -11,8 +11,7 @@ function viewChannel(pm) {
     result[event] = function(args) {
       if (pm.docSetSinceViewUpdate) return null
       pm.on.interaction.dispatch()
-      let map = pm.mapsSinceViewUpdate.length ? new MapThrough(pm.mapsSinceViewUpdate) : null
-      return handler(pm, args, map)
+      return handler(pm, args, pm.mappingSinceViewUpdate)
     }
   }
   return result
@@ -54,7 +53,7 @@ const handlers = {
     }
     let marks = pm.storedMarks || pm.doc.marksAt(from)
     let tr = pm.tr.replaceWith(from, to, text ? pm.schema.text(text, marks) : null)
-    tr.setSelection(Selection.near(tr.doc.resolve(tr.map(to)), -1))
+    tr.setSelection(Selection.near(tr.doc.resolve(tr.mapping.map(to)), -1))
     if (newSelection) applyNewSelection(tr, newSelection, map)
     tr.applyAndScroll()
     if (text) pm.on.textInput.dispatch(text)
@@ -140,21 +139,22 @@ function doReplace(pm, {from, to, slice, newSelection}, map, selectContent) {
     to = Math.max(from, map.map(to, -1))
   }
   let tr = pm.tr.replace(from, to, pm.on.transformPasted.dispatch(slice))
-  tr.setSelection(Selection.near(tr.doc.resolve(tr.map(to)), -1))
+  tr.setSelection(Selection.near(tr.doc.resolve(tr.mapping.map(to)), -1))
   if (newSelection) applyNewSelection(tr, newSelection, map)
   tr.applyAndScroll()
 
   if (selectContent)
-    pm.setSelection(Selection.between(from, tr.map(to)))
+    pm.setSelection(Selection.between(from, tr.mapping.map(to)))
 
   return handled
 }
 
 function applyNewSelection(tr, {anchor, head}, map) {
   if (map) {
-    let remap = new Remapping([], [map])
-    for (let i = 0; i < tr.maps.length; i++)
-      remap.addToBack(tr.maps[i], remap.addToFront(tr.maps[i].invert()))
+    let maps = tr.mapping.maps
+    let remap = new Remapping(maps.slice().reverse().concat(map))
+    for (let i = 0; i < maps.length; i++)
+      remap.appendMap(maps[i], maps.length - 1 - i)
     anchor = remap.map(anchor)
     head = remap.map(head)
   }

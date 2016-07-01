@@ -8,7 +8,7 @@ function tag(tr, name) {
   if (calc) { name = calc[1]; extra = +calc[2] }
   let pos = tr.before.tag[name]
   if (pos == null) return undefined
-  return tr.map(pos) + extra
+  return tr.mapping.map(pos) + extra
 }
 
 function mrk(tr, mark) {
@@ -105,14 +105,13 @@ function invert(transform) {
   return out
 }
 
-function testMapping(maps, pos, newPos, label) {
-  let mapped = pos
-  maps.forEach(m => mapped = m.map(mapped, 1))
+function testMapping(mapping, pos, newPos, label) {
+  let mapped = mapping.map(pos, 1)
   cmpStr(mapped, newPos, label)
 
-  let remap = new Remapping(maps.map(m => m.invert()), maps.length)
-  for (let i = maps.length - 1; i >= 0; i--)
-    remap.appendMap(maps[i], --remap.mapFrom)
+  let remap = new Remapping(mapping.maps.map(m => m.invert()), mapping.maps.length)
+  for (let i = mapping.maps.length - 1; i >= 0; i--)
+    remap.appendMap(mapping.maps[i], --remap.mapFrom)
   cmpStr(remap.map(pos, 1), pos, label + " round trip")
 }
 
@@ -139,8 +138,7 @@ function testTransform(delayedTr, doc, expect) {
 
   testStepJSON(tr)
 
-  let maps = tr.maps
   for (var tag in expect.tag) // FIXME Babel 6.5.1 screws this up when I use let
-    testMapping(maps, tr.before.tag[tag], expect.tag[tag], tag)
+    testMapping(tr.mapping, tr.before.tag[tag], expect.tag[tag], tag)
 }
 exports.testTransform = testTransform

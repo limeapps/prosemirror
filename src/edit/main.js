@@ -1,5 +1,5 @@
 const {Subscription, PipelineSubscription, StoppableSubscription, DOMSubscription} = require("subscription")
-const {mapThrough} = require("../transform")
+const {Remapping} = require("../transform")
 const {Mark} = require("../model")
 const {ProseMirrorView} = require("../view")
 const {requestAnimationFrame, cancelAnimationFrame} = require("../util/dom") // FIXME only connection to the DOM we have -- move into view?
@@ -152,7 +152,7 @@ class ProseMirror {
     this.history = null
 
     this.view = new ProseMirrorView(opts.place, opts, this.doc, this.selection, viewChannel(this), this.ranges)
-    this.mapsSinceViewUpdate = []
+    this.mappingSinceViewUpdate = null
     this.docSetSinceViewUpdate = false
     this.updateScheduled = null
     this.scrollPosIntoView = null
@@ -222,7 +222,8 @@ class ProseMirror {
   updateDoc(doc, mapping, selection) {
     this.scheduleViewUpdate()
     this.ranges.transform(mapping)
-    this.mapsSinceViewUpdate.push(mapping)
+    if (!this.mappingSinceViewUpdate) this.mappingSinceViewUpdate = new Remapping
+    this.mappingSinceViewUpdate.appendMap(mapping) // FIXME split up?
     this.doc = doc
     this.selection = selection || this.selection.map(doc, mapping)
     this.on.change.dispatch()
@@ -267,7 +268,7 @@ class ProseMirror {
     let selectionBeforeTransform = this.selection
 
     this.on.beforeTransform.dispatch(transform, options)
-    this.updateDoc(transform.doc, transform, options.selection || transform.selection)
+    this.updateDoc(transform.doc, transform.mapping, options.selection || transform.selection)
     this.on.transform.dispatch(transform, selectionBeforeTransform, options)
     if (options.scrollIntoView) this.scrollIntoView()
     return transform
@@ -313,7 +314,7 @@ class ProseMirror {
     let result = this.view.update(this.doc, this.selection, this.ranges, this.requestFocus, this.scrollPosIntoView)
     if (result) {
       this.scrollPosIntoView = null
-      this.mapsSinceViewUpdate.length = 0
+      this.mappingSinceViewUpdate = null
       this.docSetSinceViewUpdate = this.requestFocus = false
       if (result.redrawn) this.on.draw.dispatch()
     }
@@ -428,8 +429,8 @@ class ProseMirror {
     // If there's been changes since the last view update, we need to
     // map forward through those to get a position that applies to the
     // current document
-    if (this.mapsSinceViewUpdate.length)
-      return mapThrough(this.mapsSinceViewUpdate, result.pos)
+    if (this.mappingSinceViewUpdate)
+      return this.mappingSinceViewUpdate.map(result.pos)
     else
       return result.pos
   }
@@ -439,7 +440,7 @@ class ProseMirror {
   // window) of the given document position.
   coordsAtPos(pos, force = false) {
     if (!maybeForceUpdate(this, force)) return null
-    if (this.mapsSinceViewUpdate.length) this.updateView()
+    if (this.mappingSinceViewUpdate) this.updateView()
     return this.view.coordsAtPos(pos)
   }
 

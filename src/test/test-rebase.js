@@ -9,8 +9,8 @@ const {tr} = require("./trans")
 function runRebase(transforms, expected) {
   let start = transforms[0].before, doc = start, maps = []
   transforms.forEach(transform => {
-    let result = rebaseSteps(doc, maps, transform.steps, transform.maps)
-    maps = maps.concat(result.transform.maps)
+    let result = rebaseSteps(doc, maps, transform.steps, transform.mapping.maps)
+    maps = maps.concat(result.transform.mapping.maps)
     doc = result.doc
   })
   cmpNode(doc, expected)

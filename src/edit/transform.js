@@ -34,12 +34,9 @@ class EditorTransform extends Transform {
   // [`setSelection`](#EditorTransform.setSelection).
   get selection() {
     if (this.curSelectionAt < this.steps.length) {
-      if (this.curSelectionAt) {
-        for (let i = this.curSelectionAt; i < this.steps.length; i++)
-          this.curSelection = this.curSelection.map(i == this.steps.length - 1 ? this.doc : this.docs[i + 1], this.maps[i])
-      } else {
-        this.curSelection = this.curSelection.map(this.doc, this)
-      }
+      if (this.curSelectionAt) this.mapping.mapFrom = this.curSelectionAt
+      this.curSelection = this.curSelection.map(this.doc, this.mapping)
+      if (this.curSelectionAt) this.mapping.mapFrom = 0
       this.curSelectionAt = this.steps.length
     }
     return this.curSelection
@@ -87,7 +84,7 @@ class EditorTransform extends Transform {
     }
 
     this.replaceWith(from, to, fragment)
-    let map = this.maps[this.maps.length - 1]
+    let map = this.mapping.maps[this.mapping.maps.length - 1]
     this.setSelection(Selection.near(this.doc.resolve(map.map(to))))
     return this
   }
