@@ -219,17 +219,6 @@ class ProseMirror {
     this.on.selectionChange.dispatch()
   }
 
-  updateDoc(doc, mapping, selection) {
-    this.scheduleViewUpdate()
-    this.ranges.transform(mapping)
-    if (!this.mappingSinceViewUpdate) this.mappingSinceViewUpdate = new Remapping
-    this.mappingSinceViewUpdate.appendMap(mapping) // FIXME split up?
-    this.doc = doc
-    this.selection = selection || this.selection.map(doc, mapping)
-    this.on.change.dispatch()
-    this.on.selectionChange.dispatch()
-  }
-
   // :: EditorTransform
   // Create an editor- and selection-aware `Transform` object for this
   // editor.
@@ -268,7 +257,17 @@ class ProseMirror {
     let selectionBeforeTransform = this.selection
 
     this.on.beforeTransform.dispatch(transform, options)
-    this.updateDoc(transform.doc, transform.mapping, options.selection || transform.selection)
+    this.scheduleViewUpdate()
+    this.ranges.transform(transform.mapping)
+
+    if (!this.mappingSinceViewUpdate) this.mappingSinceViewUpdate = new Remapping
+    this.mappingSinceViewUpdate.appendMapping(transform.mapping)
+
+    this.doc = transform.doc
+    this.selection = options.selection || transform.selection || this.selection.map(this.doc, transform.mapping)
+    this.on.change.dispatch()
+    this.on.selectionChange.dispatch()
+
     this.on.transform.dispatch(transform, selectionBeforeTransform, options)
     if (options.scrollIntoView) this.scrollIntoView()
     return transform

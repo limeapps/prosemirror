@@ -1,3 +1,4 @@
+const {Transform} = require("../transform")
 const {rebaseSteps} = require("../collab/rebase")
 
 const {doc, blockquote, p, li, ul, em} = require("./build")
@@ -7,28 +8,25 @@ const {cmpNode, cmpStr} = require("./cmp")
 const {tr} = require("./trans")
 
 function runRebase(transforms, expected) {
-  let start = transforms[0].before, doc = start, maps = []
+  let start = transforms[0].before, full = new Transform(start)
   transforms.forEach(transform => {
-    let result = rebaseSteps(doc, maps, transform.steps, transform.mapping.maps)
-    maps = maps.concat(result.transform.mapping.maps)
-    doc = result.doc
+    let rebased = new Transform(transform.doc)
+    let start = rebaseSteps(rebased, transform.steps,
+                            transform.steps.map((s, i) => s.invert(transform.docs[i])),
+                            full.steps)
+    for (let i = start; i < rebased.steps.length; i++) full.step(rebased.steps[i])
   })
-  cmpNode(doc, expected)
+  cmpNode(full.doc, expected)
 
   for (let tag in start.tag) {
-    let mapped = start.tag[tag], deleted = false
-    for (let i = 0; i < maps.length; i++) {
-      let result = maps[i].mapResult(mapped, 1)
-      if (result.deleted) deleted = true
-      mapped = result.pos
-    }
+    let mapped = full.mapping.mapResult(start.tag[tag])
 
     let exp = expected.tag[tag]
-    if (deleted) {
+    if (mapped.deleted) {
       if (exp) throw new Failure("Tag " + tag + " was unexpectedly deleted")
     } else {
       if (!exp) throw new Failure("Tag " + tag + " is not actually deleted")
-      cmpStr(mapped, exp, tag)
+      cmpStr(mapped.pos, exp, tag)
     }
   }
 }
