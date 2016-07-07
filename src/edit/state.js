@@ -1,5 +1,6 @@
 const {Mark} = require("../model")
 const {Selection} = require("../selection")
+const {Remapping} = require("../transform")
 
 const {EditorTransform} = require("./transform")
 
@@ -71,14 +72,39 @@ class EditorState {
   apply(action) {
     let {doc, selection} = this
     if (action.type == "transform") {
+      action = this.mapTransformForward(action)
       if (!action.transform.docs[0].eq(this.doc))
         throw new RangeError("Applying a transform that does not start with the current document")
       doc = action.transform.doc
       selection = action.selection || this.selection.map(action.transform.doc, action.transform.mapping)
     } else if (action.type == "selection") {
+      action = this.mapSelectionForward(action)
       selection = action.selection
     }
     return new EditorState(doc, selection, this.view.apply(action, doc, selection))
+  }
+
+  mapTransformForward(action) {
+    if (this.view.mappings.length == 0) return action
+    let copy = {}
+    for (let prop in action) copy[prop] = action[prop]
+    let remapping = new Remapping(action.transform.mapping.maps.map(m => m.invert()).reverse().concat(this.view.mappings))
+    let newTransform = copy.transform = this.tr
+    for (let i = 0; i < action.transform.steps.length; i++) {
+      let step = action.transform.steps[i].map(remapping.slice(i + 1))
+      if (step && newTransform.maybeStep(step).doc)
+        remapping.appendMap(step.posMap(), i)
+    }
+    if (action.selection) copy.selection = action.selection.map(this.doc, remapping)
+    return copy
+  }
+
+  mapSelectionForward(action) {
+    if (this.view.mappings.length == 0) return action
+    let copy = {}
+    for (let prop in action) copy[prop] = action[prop]
+    copy.selection = action.selection.map(this.doc, new Remapping(this.view.mappings))
+    return copy
   }
 
   // :: EditorTransform
