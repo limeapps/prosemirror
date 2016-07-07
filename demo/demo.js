@@ -1,21 +1,16 @@
-const {ProseMirror} = require("../src/edit")
-const {Schema} = require("../src/model")
+const {EditorState} = require("../src/edit")
 const {schema} = require("../src/schema-basic")
-const {exampleSetup} = require("../src/example-setup")
-const {addTableNodes} = require("../src/schema-table")
+const {EditorView} = require("../src/view")
 
-const mySchema = new Schema({
-  nodes: addTableNodes(schema.nodeSpec, "block+", "block"),
-  marks: schema.markSpec
-})
+function reduce(state, action) {
+  if (action.type == "transform") return state.applyTransform(action.transform, action.options)
+  if (action.type == "selection") return state.update({selection: action.selection}) // FIXME reset marks
+  throw new RangeError("Unknown action: " + action.type)
+}
 
-const pm = window.pm = new ProseMirror({
-  place: document.querySelector(".full"),
-  doc: mySchema.parseDOM(document.querySelector("#content")),
-  plugins: [exampleSetup.config({tooltipMenu: true})]
-})
-
-document.querySelector("#mark").addEventListener("mousedown", e => {
-  pm.markRange(pm.selection.from, pm.selection.to, {className: "marked"})
-  e.preventDefault()
+let state = EditorState.fromDoc(schema.parseDOM(document.querySelector("#content")))
+let view = new EditorView(document.querySelector(".full"), state, {
+  onAction(action) {
+    state = view.update(state = reduce(state, action))
+  }
 })

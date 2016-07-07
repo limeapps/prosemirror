@@ -2,29 +2,15 @@ const {Fragment} = require("../model")
 const {Transform, insertPoint} = require("../transform")
 const {Selection} = require("../selection")
 
-const applyAndScroll = {scrollIntoView: true}
-
-// ;; A selection-aware extension of `Transform`. Use
-// `ProseMirror.tr` to create an instance.
+// ;; A selection-aware extension of `Transform`. Use `EditorState.tr`
+// to create an instance.
 class EditorTransform extends Transform {
-  constructor(pm) {
-    super(pm.doc)
-    this.pm = pm
-    this.curSelection = pm.selection
+  constructor(state) {
+    super(state.doc)
+    this.state = state
+    this.curSelection = state.selection
     this.curSelectionAt = 0
-  }
-
-  // :: (?Object) → EditorTransform
-  // Apply the transformation. Returns the transform, or `false` it is
-  // was empty.
-  apply(options) {
-    return this.pm.apply(this, options)
-  }
-
-  // :: () → EditorTransform
-  // Apply this transform with a `{scrollIntoView: true}` option.
-  applyAndScroll() {
-    return this.pm.apply(this, applyAndScroll)
+    this.selectionSet = false
   }
 
   // :: Selection
@@ -46,6 +32,7 @@ class EditorTransform extends Transform {
   setSelection(selection) {
     this.curSelection = selection
     this.curSelectionAt = this.steps.length
+    this.selectionSet = true
     return this
   }
 
@@ -57,7 +44,7 @@ class EditorTransform extends Transform {
     let {empty, $from, $to, from, to, node: selNode} = this.selection
 
     if (node && node.isInline && inheritMarks !== false)
-      node = node.mark(empty ? this.pm.storedMarks : this.doc.marksAt(from))
+      node = node.mark(empty ? this.state.view.storedMarks : this.doc.marksAt(from))
     let fragment = Fragment.from(node)
 
     if (selNode && selNode.isTextblock && node && node.isInline) {
@@ -96,7 +83,14 @@ class EditorTransform extends Transform {
   // :: (string) → EditorTransform
   // Replace the selection with a text node containing the given string.
   typeText(text) {
-    return this.replaceSelection(this.pm.schema.text(text), true)
+    return this.replaceSelection(this.state.schema.text(text), true)
+  }
+
+  action(options = {}) {
+    if (options === true) options = {scrollIntoView: true}
+    if (!options.selection && this.selectionSet)
+      options.selection = this.selection
+    return {type: "transform", transform: this, options}
   }
 }
 exports.EditorTransform = EditorTransform

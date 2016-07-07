@@ -3,86 +3,74 @@ const Keymap = require("browserkeymap")
 const {Selection, NodeSelection, TextSelection} = require("../selection")
 const browser = require("../util/browser")
 
+const {verticalMotionLeavesTextblock} = require("./selection")
+
 function nothing() { return true }
 
-function moveSelectionBlock(pm, dir) {
-  let {$from, $to, node} = pm.selection
+function selAction(selection) {
+  return {type: "selection", selection, scrollIntoView: true}
+}
+
+function moveSelectionBlock(state, dir) {
+  let {$from, $to, node} = state.selection
   let $side = dir > 0 ? $to : $from
-  let $start = node && node.isBlock ? $side : $side.depth ? pm.doc.resolve(dir > 0 ? $side.after() : $side.before()) : null
+  let $start = node && node.isBlock ? $side : $side.depth ? state.doc.resolve(dir > 0 ? $side.after() : $side.before()) : null
   return $start && Selection.findFrom($start, dir)
 }
 
-function selectNodeHorizontally(pm, dir) {
-  let {empty, node, $from, $to} = pm.selection
+function selectNodeHorizontally(state, dir) {
+  let {empty, node, $from, $to} = state.selection
   if (!empty && !node) return false
 
-  if (node && node.isInline) {
-    pm.setSelection(new TextSelection(dir > 0 ? $to : $from))
-    return true
-  }
+  if (node && node.isInline)
+    return selAction(new TextSelection(dir > 0 ? $to : $from))
 
   if (!node) {
     let {node: nextNode, offset} = dir > 0
         ? $from.parent.childAfter($from.parentOffset)
         : $from.parent.childBefore($from.parentOffset)
     if (nextNode) {
-      if (nextNode.type.selectable && offset == $from.parentOffset - (dir > 0 ? 0 : nextNode.nodeSize)) {
-        pm.setSelection(new NodeSelection(dir < 0 ? pm.doc.resolve($from.pos - nextNode.nodeSize) : $from))
-        return true
-      }
+      if (nextNode.type.selectable && offset == $from.parentOffset - (dir > 0 ? 0 : nextNode.nodeSize))
+        return selAction(new NodeSelection(dir < 0 ? state.doc.resolve($from.pos - nextNode.nodeSize) : $from))
       return false
     }
   }
 
-  let next = moveSelectionBlock(pm, dir)
-  if (next && (next instanceof NodeSelection || node)) {
-    pm.setSelection(next)
-    return true
-  }
-  return false
+  let next = moveSelectionBlock(state, dir)
+  if (next && (next instanceof NodeSelection || node))
+    return selAction(next)
 }
 
 function horiz(dir) {
-  return pm => {
-    let done = selectNodeHorizontally(pm, dir)
-    if (done) pm.scrollIntoView()
-    return done
-  }
+  return view => selectNodeHorizontally(view.state, dir)
 }
 
-// : (ProseMirror, number)
+// : (EditorState, number)
 // Check whether vertical selection motion would involve node
 // selections. If so, apply it (if not, the result is left to the
 // browser)
-function selectNodeVertically(pm, dir) {
-  let {empty, node, $from, $to} = pm.selection
+function selectNodeVertically(view, dir) {
+  let {empty, node, $from, $to} = view.state.selection
   if (!empty && !node) return false
 
   let leavingTextblock = true, $start = dir < 0 ? $from : $to
   if (!node || node.isInline)
-    leavingTextblock = pm.view.verticalMotionLeavesTextblock(dir)
+    leavingTextblock = verticalMotionLeavesTextblock(view, dir) // FIXME need access to the view
 
   if (leavingTextblock) {
-    let next = moveSelectionBlock(pm, dir)
-    if (next && (next instanceof NodeSelection)) {
-      pm.setSelection(next)
-      return true
-    }
+    let next = moveSelectionBlock(view, dir)
+    if (next && (next instanceof NodeSelection))
+      return selAction(next)
   }
 
   if (!node || node.isInline) return false
 
   let beyond = Selection.findFrom($start, dir)
-  if (beyond) pm.setSelection(beyond)
-  return true
+  return beyond ? selAction(beyond) : true
 }
 
 function vert(dir) {
-  return pm => {
-    let done = selectNodeVertically(pm, dir)
-    if (done !== false) pm.scrollIntoView()
-    return done
-  }
+  return view => selectNodeVertically(view, dir)
 }
 
 // A backdrop keymap used to make sure we always suppress keys that

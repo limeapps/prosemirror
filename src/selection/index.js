@@ -79,6 +79,7 @@ class Selection {
     return findSelectionIn(doc, doc, doc.content.size, doc.childCount, -1, textOnly)
   }
 
+  // :: (ResolvedPos, ResolvedPos, ?number) → Selection
   static between($anchor, $head, bias) {
     let found = Selection.near($head, bias)
     if (found instanceof TextSelection) {

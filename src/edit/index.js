@@ -3,6 +3,5 @@
 // the browser. `ProseMirror` is the class you'll want to instantiate
 // and interact with when using the editor.
 
-exports.ProseMirror = require("./main").ProseMirror
-exports.MarkedRange = require("./range").MarkedRange
-exports.Plugin = require("./plugin").Plugin
+exports.EditorState = require("./state").EditorState
+exports.ViewState = require("./state").ViewState
