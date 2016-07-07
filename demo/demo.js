@@ -8,9 +8,16 @@ function reduce(state, action) {
   throw new RangeError("Unknown action: " + action.type)
 }
 
+let scheduled = null, actions = []
 let state = EditorState.fromDoc(schema.parseDOM(document.querySelector("#content")))
 let view = new EditorView(document.querySelector(".full"), state, {
   onAction(action) {
-    state = view.update(state = reduce(state, action))
+    actions.push(action)
+    if (scheduled == null)
+      scheduled = requestAnimationFrame(() => {
+        scheduled = null
+        window.state = state = view.update(actions.reduce(reduce, state))
+        actions.length = 0
+      })
   }
 })
