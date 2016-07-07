@@ -28,6 +28,10 @@ class Selection {
     return this.from == this.to
   }
 
+  action(scroll, focus) {
+    return {type: "selection", selection: this, focus, scrollIntoView: scroll}
+  }
+
   // :: (other: Selection) → bool #path=Selection.prototype.eq
   // Test whether the selection is the same as another selection.
 

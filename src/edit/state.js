@@ -11,10 +11,33 @@ class ViewState {
     this.storedMarks = storedMarks || Mark.empty
   }
 
-  applyTransform(transform, options) {
+  apply(action, doc, selection) {
+    if (action.type == "transform")
+      return this.applyTransform(action, selection)
+    if (action.type == "selection")
+      return this.applySelection(action, selection)
+    if (action.type == "addActiveStyle" && selection.empty)
+      return new ViewState(this.mappings, this.requestedFocus, this.requestedScroll,
+                           action.mark.addToSet(this.storedMarks || currentMarks(doc, selection)))
+    if (action.type == "removeActiveStyle" && selection.empty)
+      return new ViewState(this.mappings, this.requestedFocus, this.requestedScroll,
+                           action.type.removeFroMSet(this.storedMarks || currentMarks(doc, selection)))
+    return this
+  }
+
+  applyTransform({transform, scrollIntoView}, selection) {
     return new ViewState(this.mappings.concat(transform.mapping), this.requestedFocus,
-                         options.scrollIntoView ? true : this.requestedScroll,
-                         options.selection ? Mark.empty : this.storedMarks)
+                         scrollIntoView
+                          ? scrollPoint(selection)
+                          : this.requestedScroll == null ? null : transform.mapping.map(this.requestedScroll),
+                         selection ? Mark.empty : this.storedMarks)
+  }
+
+  applySelection({scrollIntoView, focus}, selection) {
+    return new ViewState(this.mappings,
+                         focus || this.requestedFocus,
+                         scrollIntoView ? scrollPoint(selection) : this.requestedScroll,
+                         Mark.empty)
   }
 
   clean() {
@@ -24,6 +47,14 @@ class ViewState {
 ViewState.initial = new ViewState([], false, null, null)
 
 exports.ViewState = ViewState
+
+function currentMarks(doc, selection) {
+  return selection.head == null ? Mark.none : doc.marksAt(selection.head)
+}
+
+function scrollPoint(selection) {
+  return selection.head == null ? selection.from : selection.head
+}
 
 class EditorState {
   constructor(doc, selection, view) {
@@ -37,12 +68,17 @@ class EditorState {
     return this.doc.type.schema
   }
 
-  applyTransform(transform, options) {
-    if (!transform.docs[0].eq(this.doc))
-      throw new RangeError("Applying a transform that does not start with the current document")
-    let newSel = options.selection || this.selection.map(transform.doc, transform.mapping)
-    return new EditorState(transform.doc, newSel,
-                           this.view.applyTransform(transform, options))
+  apply(action) {
+    let {doc, selection} = this
+    if (action.type == "transform") {
+      if (!action.transform.docs[0].eq(this.doc))
+        throw new RangeError("Applying a transform that does not start with the current document")
+      doc = action.transform.doc
+      selection = action.selection || this.selection.map(action.transform.doc, action.transform.mapping)
+    } else if (action.type == "selection") {
+      selection = action.selection
+    }
+    return new EditorState(doc, selection, this.view.apply(action, doc, selection))
   }
 
   // :: EditorTransform
