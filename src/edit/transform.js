@@ -86,15 +86,13 @@ class EditorTransform extends Transform {
     return this.replaceSelection(this.state.schema.text(text), true)
   }
 
-  action(options) {
-    let action = {type: "transform", transform: this}
-    if (this.selectionSet)
-      action.selection = this.selection
-    if (options === true)
-      action.scrollIntoView = true
-    else if (options)
-      for (let prop in options) action[prop] = options[prop]
-    return action
+  apply(options) {
+    return this.state.applyTransform(this, options)
+  }
+
+  applyAndScroll() {
+    return this.state.applyTransform(this, {scrollIntoView: true,
+                                            selection: this.selectionSet ? this.selection : null})
   }
 }
 exports.EditorTransform = EditorTransform

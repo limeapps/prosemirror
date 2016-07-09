@@ -5,62 +5,42 @@ const {Remapping} = require("../transform")
 const {EditorTransform} = require("./transform")
 
 class ViewState {
-  constructor(mappings, requestedFocus, requestedScroll, storedMarks) {
-    this.mappings = mappings
-    this.requestedFocus = requestedFocus
-    this.requestedScroll = requestedScroll
-    this.storedMarks = storedMarks || Mark.empty
+  constructor(inDOMUpdate, scrollToSelection) {
+    this.inDOMUpdate = inDOMUpdate
+    this.scrollToSelection = scrollToSelection
   }
 
-  apply(action, doc, selection) {
-    if (action.type == "transform")
-      return this.applyTransform(action, selection)
-    if (action.type == "selection")
-      return this.applySelection(action, selection)
-    if (action.type == "addActiveStyle" && selection.empty)
-      return new ViewState(this.mappings, this.requestedFocus, this.requestedScroll,
-                           action.mark.addToSet(this.storedMarks || currentMarks(doc, selection)))
-    if (action.type == "removeActiveStyle" && selection.empty)
-      return new ViewState(this.mappings, this.requestedFocus, this.requestedScroll,
-                           action.type.removeFroMSet(this.storedMarks || currentMarks(doc, selection)))
-    return this
+  startDOMUpdate() {
+    return new ViewState(new Remapping, this.scrollToSelection)
   }
 
-  applyTransform({transform, scrollIntoView}, selection) {
-    return new ViewState(this.mappings.concat(transform.mapping), this.requestedFocus,
-                         scrollIntoView
-                          ? scrollPoint(selection)
-                          : this.requestedScroll == null ? null : transform.mapping.map(this.requestedScroll),
-                         selection ? Mark.empty : this.storedMarks)
+  endDOMUpdate() {
+    return new ViewState(null, this.scrollToSelection)
   }
 
-  applySelection({scrollIntoView, focus}, selection) {
-    return new ViewState(this.mappings,
-                         focus || this.requestedFocus,
-                         scrollIntoView ? scrollPoint(selection) : this.requestedScroll,
-                         Mark.empty)
+  applyTransform(transform, options) {
+    return new ViewState(this.inDOMUpdate && this.inDOMUpdate.appendMapping(transform.mapping),
+                         options.scrollIntoView ? true : options.selection ? false : this.scrollToSelection)
   }
 
-  clean() {
-    return new ViewState([], false, null, this.storedMarks)
+  applySelection(_selection, options) {
+    return new ViewState(this.inDOMUpdate, !!options.scrollIntoView)
   }
 }
-ViewState.initial = new ViewState([], false, null, null)
-
+ViewState.initial = new ViewState(null, false)
 exports.ViewState = ViewState
 
 function currentMarks(doc, selection) {
   return selection.head == null ? Mark.none : doc.marksAt(selection.head)
 }
 
-function scrollPoint(selection) {
-  return selection.head == null ? selection.from : selection.head
-}
+const nullOptions = {}
 
 class EditorState {
-  constructor(doc, selection, view) {
+  constructor(doc, selection, storedMarks, view) {
     this.doc = doc
     this.selection = selection
+    this.storedMarks = storedMarks
     this.view = view
   }
 
@@ -69,42 +49,31 @@ class EditorState {
     return this.doc.type.schema
   }
 
-  apply(action) {
-    let {doc, selection} = this
-    if (action.type == "transform") {
-      action = this.mapTransformForward(action)
-      if (!action.transform.docs[0].eq(this.doc))
-        throw new RangeError("Applying a transform that does not start with the current document")
-      doc = action.transform.doc
-      selection = action.selection || this.selection.map(action.transform.doc, action.transform.mapping)
-    } else if (action.type == "selection") {
-      action = this.mapSelectionForward(action)
-      selection = action.selection
-    }
-    return new EditorState(doc, selection, this.view.apply(action, doc, selection))
+  applyTransform(transform, options = nullOptions) {
+    if (!transform.docs[0].eq(this.doc))
+      throw new RangeError("Applying a transform that does not start with the current document")
+    return new EditorState(transform.doc,
+                           options.selection || this.selection.map(transform.doc, transform.mapping),
+                           options.selection ? null : this.storedMarks,
+                           this.view.applyTransform(transform, options))
   }
 
-  mapTransformForward(action) {
-    if (this.view.mappings.length == 0) return action
-    let copy = {}
-    for (let prop in action) copy[prop] = action[prop]
-    let remapping = new Remapping(action.transform.mapping.maps.map(m => m.invert()).reverse().concat(this.view.mappings))
-    let newTransform = copy.transform = this.tr
-    for (let i = 0; i < action.transform.steps.length; i++) {
-      let step = action.transform.steps[i].map(remapping.slice(i + 1))
-      if (step && newTransform.maybeStep(step).doc)
-        remapping.appendMap(step.posMap(), i)
-    }
-    if (action.selection) copy.selection = action.selection.map(this.doc, remapping)
-    return copy
+  applySelection(selection, options = nullOptions) {
+    return new EditorState(this.doc, selection, null, this.view.applySelection(selection, options))
   }
 
-  mapSelectionForward(action) {
-    if (this.view.mappings.length == 0) return action
-    let copy = {}
-    for (let prop in action) copy[prop] = action[prop]
-    copy.selection = action.selection.map(this.doc, new Remapping(this.view.mappings))
-    return copy
+  addActiveMark(mark) {
+    if (!this.selection.empty) return this
+    return new EditorState(this.doc, this.selection,
+                           mark.addToSet(this.storedMarks || currentMarks(this.doc, this.selection)),
+                           this.view)
+  }
+
+  removeActiveMark(markType) {
+    if (!this.selection.empty) return this
+    return new EditorState(this.doc, this.selection,
+                           markType.removeFromSet(this.storedMarks || currentMarks(this.doc, this.selection)),
+                           this.view)
   }
 
   // :: EditorTransform
@@ -114,11 +83,12 @@ class EditorState {
   update(fields) {
     return new EditorState(fields.doc || this.doc,
                            fields.selection || this.selection,
+                           fields.storedMarks || this.storedMarks,
                            fields.view || this.view)
   }
 
   static fromDoc(doc, selection) {
-    return new EditorState(doc, selection || Selection.atStart(doc), ViewState.initial)
+    return new EditorState(doc, selection || Selection.atStart(doc), null, ViewState.initial)
   }
 
   static fromSchema(schema) {
