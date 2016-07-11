@@ -1,4 +1,4 @@
-const {EditorState} = require("../src/edit")
+const {EditorState} = require("../src/state")
 const {schema} = require("../src/schema-basic")
 const {EditorView} = require("../src/view")
 const {baseKeymap} = require("../src/commands")

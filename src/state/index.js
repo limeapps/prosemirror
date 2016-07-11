@@ -1,8 +1,11 @@
+// !! This module implements the state object of a ProseMirror editor.
+
 const {Mark} = require("../model")
 const {Selection} = require("../selection")
 const {Remapping} = require("../transform")
 
 const {EditorTransform} = require("./transform")
+exports.EditorTransform = EditorTransform
 
 class ViewState {
   constructor(inDOMChange, domChangeMapping, scrollToSelection) {
