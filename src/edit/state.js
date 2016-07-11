@@ -5,29 +5,31 @@ const {Remapping} = require("../transform")
 const {EditorTransform} = require("./transform")
 
 class ViewState {
-  constructor(inDOMUpdate, scrollToSelection) {
-    this.inDOMUpdate = inDOMUpdate
+  constructor(inDOMChange, domChangeMapping, scrollToSelection) {
+    this.inDOMChange = inDOMChange
+    this.domChangeMapping = domChangeMapping
     this.scrollToSelection = scrollToSelection
   }
 
-  startDOMUpdate() {
-    return new ViewState(new Remapping, this.scrollToSelection)
+  startDOMChange(id) {
+    return new ViewState(id, new Remapping, this.scrollToSelection)
   }
 
-  endDOMUpdate() {
-    return new ViewState(null, this.scrollToSelection)
+  endDOMChange() {
+    return new ViewState(null, null, this.scrollToSelection)
   }
 
   applyTransform(transform, options) {
-    return new ViewState(this.inDOMUpdate && this.inDOMUpdate.appendMapping(transform.mapping),
+    return new ViewState(this.inDOMChange,
+                         this.domChangeMapping && this.domChangeMapping.copy().appendMapping(transform.mapping),
                          options.scrollIntoView ? true : options.selection ? false : this.scrollToSelection)
   }
 
   applySelection(_selection, options) {
-    return new ViewState(this.inDOMUpdate, !!options.scrollIntoView)
+    return new ViewState(this.inDOMChange, this.domChangeMapping, !!options.scrollIntoView)
   }
 }
-ViewState.initial = new ViewState(null, false)
+ViewState.initial = new ViewState(null, null, false)
 exports.ViewState = ViewState
 
 function currentMarks(doc, selection) {
