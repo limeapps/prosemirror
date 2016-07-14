@@ -1,4 +1,3 @@
-require("./test-command")
 require("./test-selection")
 require("./test-node-selection")
 require("./test-keys")

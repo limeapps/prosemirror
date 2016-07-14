@@ -1,12 +1,12 @@
-const {defTest} = require("../tests")
-const {tempEditor} = require("./def")
-const {cmpNode} = require("../cmp")
-const {doc, blockquote, pre, h1, h2, p, li, ol, ul, em, hr} = require("../build")
+const {EditorState} = require("../state")
+const commands = require("../commands")
+const listCommands = require("../commands-list")
+const {Schema} = require("../model")
+const {schema, Heading, Doc} = require("../schema-basic")
 
-const commands = require("../../commands")
-const listCommands = require("../../commands-list")
-const {Schema} = require("../../model")
-const {schema, Heading, Doc} = require("../../schema-basic")
+const {defTest} = require("./tests")
+const {cmpNode, is} = require("./cmp")
+const {makeState, doc, blockquote, pre, h1, h2, p, li, ol, ul, em, hr} = require("./build")
 
 const used = Object.create(null)
 const n = schema.nodes
@@ -14,12 +14,17 @@ const n = schema.nodes
 function test(cmd, ...args) {
   let known = used[cmd] || 0
   defTest("command_" + cmd + "_" + known, () => {
-    let pm = tempEditor({doc: args[args.length - 2]})
-    let prep = args.slice(0, args.length - 2)
+    let state = makeState(args[args.length - 2])
     let f = commands[cmd] || listCommands[cmd]
+    let prep = args.slice(0, args.length - 2)
     if (prep.length) f = f(...prep)
-    f(pm)
-    cmpNode(pm.doc, args[args.length - 1])
+    let newState = f(state), expected = args[args.length - 1]
+    if (expected) {
+      is(newState, "null returned")
+      cmpNode(newState.doc, expected)
+    } else {
+      is(!newState, "state returned")
+    }
   })
   used[cmd] = known + 1
 }
@@ -65,7 +70,7 @@ test("joinBackward",
      doc(blockquote(p("there"))))
 test("joinBackward",
      doc(p("<a>foo")),
-     doc(p("foo")))
+     null)
 
 test("deleteSelection",
      doc(p("f<a>o<b>o")),
@@ -98,7 +103,7 @@ test("deleteWordBefore",
      doc(p("foo baz")))
 test("deleteWordBefore",
      doc(p("<a>foo")),
-     doc(p("foo")))
+     null)
 test("deleteWordBefore",
      doc(p("foo   <a>bar")),
      doc(p("foobar")))
@@ -108,7 +113,7 @@ test("joinForward",
      doc(p("foobar")))
 test("joinForward",
      doc(p("foo<a>")),
-     doc(p("foo")))
+     null)
 test("joinForward",
      doc(p("foo<a>"), hr, p("bar")),
      doc(p("foo"), p("bar")))
@@ -132,7 +137,7 @@ test("joinForward",
      doc(ul(li(p("hi")), li(p("there")))))
 test("joinForward",
      doc(ul(li(p("there<a>")))),
-     doc(ul(li(p("there")))))
+     null)
 test("joinForward",
      doc(blockquote(p("there<a>")), hr),
      doc(blockquote(p("there"))))
@@ -161,7 +166,7 @@ test("deleteWordAfter",
      doc(p("foo baz")))
 test("deleteWordAfter",
      doc(p("foo<a>")),
-     doc(p("foo")))
+     null)
 test("deleteWordAfter",
      doc(p("fo<a>o")),
      doc(p("fo")))
@@ -174,7 +179,7 @@ test("joinUp",
      doc(blockquote(p("foo"), p("<a>bar"))))
 test("joinUp",
      doc(blockquote(p("<a>foo")), blockquote(p("bar"))),
-     doc(blockquote(p("foo")), blockquote(p("bar"))))
+     null)
 test("joinUp",
      doc(ul(li(p("foo"))), ul(li(p("<a>bar")))),
      doc(ul(li(p("foo")), li(p("bar")))))
@@ -183,7 +188,7 @@ test("joinUp",
      doc(ul(li(p("foo"), p("bar")))))
 test("joinUp",
      doc(ul(li(p("foo")), li("<a>", p("bar")))),
-     doc(ul(li(p("foo")), li(p("bar")))))
+     null)
 test("joinUp",
      doc(ul(li(p("foo")), "<a>", li(p("bar")))),
      doc(ul(li(p("foo"), p("bar")))))
@@ -193,7 +198,7 @@ test("joinDown",
      doc(blockquote(p("foo"), p("<a>bar"))))
 test("joinDown",
      doc(blockquote(p("foo")), blockquote(p("<a>bar"))),
-     doc(blockquote(p("foo")), blockquote(p("bar"))))
+     null)
 test("joinDown",
      doc(ul(li(p("foo<a>"))), ul(li(p("bar")))),
      doc(ul(li(p("foo")), li(p("bar")))))
@@ -202,7 +207,7 @@ test("joinDown",
      doc(ul(li(p("foo"), p("bar")))))
 test("joinDown",
      doc(ul(li("<a>", p("foo")), li(p("bar")))),
-     doc(ul(li(p("foo")), li(p("bar")))))
+     null)
 test("joinDown",
      doc(ul("<a>", li(p("foo")), li(p("bar")))),
      doc(ul(li(p("foo"), p("bar")))))
@@ -218,7 +223,7 @@ test("lift",
      doc(p("foo")))
 test("lift",
      doc(p("<a>foo")),
-     doc(p("foo")))
+     null)
 test("lift",
      doc(blockquote(ul(li(p("foo<a>"))))),
      doc(blockquote(p("foo<a>"))))
@@ -240,10 +245,10 @@ test("wrapInList", n.bullet_list,
      doc(p("foo"), ul(li(p("bar")), li(p("baz")))))
 test("wrapInList", n.bullet_list,
      doc(ul(li(p("<a>foo")))),
-     doc(ul(li(p("foo")))))
+     null)
 test("wrapInList", n.bullet_list,
      doc(ol(li(p("<a>foo")))),
-     doc(ol(li(p("foo")))))
+     null)
 test("wrapInList", n.bullet_list,
      doc(ul(li(p("foo"), p("<a>bar")))),
      doc(ul(li(p("foo"), ul(li(p("bar")))))))
@@ -294,7 +299,7 @@ test("splitBlock",
      doc(ol(li(p("a"))), ol(li(p("b")), li(p("c")))))
 test("splitBlock",
      doc(ol("<a>", li(p("a")), li(p("b")), li(p("c")))),
-     doc(ol(li(p("a")), li(p("b")), li(p("c")))))
+     null)
 test("splitBlock",
      doc(h1("<a>foo")),
      doc(p(), h1("foo")))
@@ -326,10 +331,10 @@ test("splitBlock",
 
 test("splitListItem", n.list_item,
      doc(p("foo<a>bar")),
-     doc(p("foobar")))
+     null)
 test("splitListItem", n.list_item,
      doc("<a>", p("foobar")),
-     doc(p("foobar")))
+     null)
 test("splitListItem", n.list_item,
      doc(ul(li(p("foo<a>bar")))),
      doc(ul(li(p("foo")), li(p("bar")))))
@@ -352,7 +357,7 @@ test("sinkListItem", n.list_item,
      doc(ul(li(p("one"), ul(li(p("two")))), li(p("three")))))
 test("sinkListItem", n.list_item,
      doc(ul(li(p("o<a><b>ne")), li(p("two")), li(p("three")))),
-     doc(ul(li(p("one")), li(p("two")), li(p("three")))))
+     null)
 test("sinkListItem", n.list_item,
      doc(ul(li(p("one")), li(p("..."), ul(li(p("two")))), li(p("t<a><b>hree")))),
      doc(ul(li(p("one")), li(p("..."), ul(li(p("two")), li(p("three")))))))
