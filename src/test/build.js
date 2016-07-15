@@ -117,12 +117,12 @@ exports.a = a
 const a2 = mark("link", {href: "http://bar"})
 exports.a2 = a2
 
-exports.makeState = function(doc) {
+exports.makeState = function(doc, config) {
   let selection, a = doc.tag.a
   if (a != null) {
     let $a = doc.resolve(a)
     if ($a.parent.isTextblock) selection = new TextSelection($a, doc.tag.b != null ? doc.resolve(doc.tag.b) : undefined)
     else selection = new NodeSelection($a)
   }
-  return EditorState.fromDoc(doc, selection)
+  return config ? config.stateFromDoc(doc, selection) : EditorState.fromDoc(doc, selection)
 }
