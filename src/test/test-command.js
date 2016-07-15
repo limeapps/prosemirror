@@ -1,4 +1,3 @@
-const {EditorState} = require("../state")
 const commands = require("../commands")
 const listCommands = require("../commands-list")
 const {Schema} = require("../model")
