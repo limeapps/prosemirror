@@ -25,16 +25,6 @@ class Configuration {
 }
 exports.Configuration = Configuration
 
-const identities = Object.create(null)
-function createPluginIdentity(name) {
-  for (let i = 0;; i++) {
-    let id = name + (i ? "_" + i : "")
-    if (id in identities) continue
-    return identities[id] = id
-  }
-}
-exports.createPluginIdentity = createPluginIdentity
-
 function organizePlugins(plugins) {
   let result = []
   function addPlugin(plugin) {
