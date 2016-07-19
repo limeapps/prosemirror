@@ -1,6 +1,4 @@
 require("./test-selection")
-require("./test-keys")
 require("./test-keymaps")
 require("./test-domchange")
-require("./test-ranges")
 require("./test-draw")
