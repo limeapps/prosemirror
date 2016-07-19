@@ -1,5 +1,5 @@
 const {history} = require("../history")
-const {makeStateClass, TextSelection} = require("../state")
+const {EditorState, TextSelection} = require("../state")
 const {schema} = require("../schema-basic")
 const {sinkListItem, liftListItem, splitListItem} = require("../commands-list")
 const {liftEmptyBlock} = require("../commands")
@@ -8,7 +8,8 @@ const {selFor, doc, p, ul, li} = require("./build")
 const {is, cmpStr, cmpNode} = require("./cmp")
 const {defTest} = require("./tests")
 
-let State = makeStateClass([history()]), StatePreserve = makeStateClass([history({preserveItems: true})])
+let State = EditorState.extend(history())
+let StatePreserve = EditorState.extend(history({preserveItems: true}))
 
 function test(name, f, doc, stateClass = State) {
   defTest("history_" + name, () => {

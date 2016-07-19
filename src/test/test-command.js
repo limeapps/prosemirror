@@ -2,7 +2,7 @@ const commands = require("../commands")
 const listCommands = require("../commands-list")
 const {Schema} = require("../model")
 const {schema, Heading, Doc} = require("../schema-basic")
-const {makeStateClass} = require("../state")
+const {EditorState} = require("../state")
 
 const {defTest} = require("./tests")
 const {cmpNode, is} = require("./cmp")
@@ -11,12 +11,10 @@ const {selFor, doc, blockquote, pre, h1, h2, p, li, ol, ul, em, hr} = require(".
 const used = Object.create(null)
 const n = schema.nodes
 
-const State = makeStateClass([])
-
 function test(cmd, ...args) {
   let known = used[cmd] || 0
   defTest("command_" + cmd + "_" + known, () => {
-    let state = State.fromDoc(args[args.length - 2], selFor(args[args.length - 2]))
+    let state = EditorState.fromDoc(args[args.length - 2], selFor(args[args.length - 2]))
     let f = commands[cmd] || listCommands[cmd]
     let prep = args.slice(0, args.length - 2)
     if (prep.length) f = f(...prep)

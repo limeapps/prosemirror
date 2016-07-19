@@ -2,15 +2,13 @@ const {doc, blockquote, pre, p, li, ul, img, br, hr} = require("./build")
 const {cmp, cmpNode, is} = require("./cmp")
 const {defTest} = require("./tests")
 
-const {makeStateClass, TextSelection, NodeSelection} = require("../state")
+const {EditorState, TextSelection, NodeSelection} = require("../state")
 const {schema} = require("../schema-basic")
 const {selectParentNode, lift, joinDown, joinUp, deleteSelection} = require("../commands")
 
-const State = makeStateClass([])
-
 function test(name, f, options) {
   defTest("selection_" + name, () => {
-    f(options.doc ? State.fromDoc(options.doc) : State.fromSchema(schema))
+    f(options.doc ? EditorState.fromDoc(options.doc) : EditorState.fromSchema(schema))
   })
 }
 

@@ -1,6 +1,6 @@
 const {collab} = require("../collab")
 const {history} = require("../history")
-const {makeStateClass, Selection} = require("../state")
+const {EditorState, Selection} = require("../state")
 const {schema} = require("../schema-basic")
 
 const {doc, p} = require("./build")
@@ -66,7 +66,7 @@ function cutHist(s) {
   return s.update({history: s.history.cut()})
 }
 
-let State = makeStateClass([collab(), history({preserveItems: true})])
+let State = EditorState.extend(collab()).extend(history({preserveItems: true}))
 
 function test(name, f, doc, n = 2) {
   defTest("collab_" + name, () => {
