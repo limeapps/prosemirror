@@ -1,5 +1,4 @@
 require("./test-selection")
-require("./test-node-selection")
 require("./test-keys")
 require("./test-keymaps")
 require("./test-domchange")

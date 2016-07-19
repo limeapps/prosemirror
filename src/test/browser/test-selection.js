@@ -162,40 +162,6 @@ test("coords_round_trip", pm => {
   doc: doc(p("one"), blockquote(p("two"), p("three")))
 })
 
-test("follow_change", pm => {
-  pm.tr.insertText(1, "xy").apply()
-  cmp(pm.selection.head, 3)
-  cmp(pm.selection.anchor, 3)
-  pm.tr.insertText(1, "zq").apply()
-  cmp(pm.selection.head, 5)
-  cmp(pm.selection.anchor, 5)
-  pm.tr.insertText(7, "uv").apply()
-  cmp(pm.selection.head, 5)
-  cmp(pm.selection.anchor, 5)
-}, {
-  doc: doc(p("hi"))
-})
-
-test("replace_with_block", pm => {
-  pm.setTextSelection(4)
-  pm.tr.replaceSelection(pm.schema.node("horizontal_rule")).apply()
-  cmpNode(pm.doc, doc(p("foo"), hr, p("bar")), "split paragraph")
-  cmp(pm.selection.head, 7, "moved after rule")
-  pm.setTextSelection(10)
-  pm.tr.replaceSelection(pm.schema.node("horizontal_rule")).apply()
-  cmpNode(pm.doc, doc(p("foo"), hr, p("bar"), hr), "inserted after")
-  cmp(pm.selection.from, 11, "selected hr")
-}, {
-  doc: doc(p("foobar"))
-})
-
-test("type_over_hr", pm => {
-  pm.view.channel.insertText({text: "x"})
-  cmpNode(pm.doc, doc(p("a"), p("x"), p("b")))
-  cmp(pm.selection.head, 5)
-  cmp(pm.selection.anchor, 5)
-}, {doc: doc(p("a"), "<a>", hr, p("b"))})
-
 test("pos_at_coords_after_wrapped", pm => {
   let top = pm.coordsAtPos(1), pos = 1, end
   for (let i = 0; i < 100; i++) {
@@ -207,3 +173,65 @@ test("pos_at_coords_after_wrapped", pm => {
   }
   cmp(pm.posAtCoords({left: end.left + 50, top: end.top + 5}), pos)
 })
+
+/*
+test("through_inline_node", state => {
+  state = dispatch(textSel(state, 4), "Right")
+  cmp(state.selection.from, 4, "moved right onto image")
+  state = dispatch(state, "Right")
+  cmp(state.selection.head, 5, "moved right past")
+  cmp(state.selection.anchor, 5, "moved right past'")
+  state = dispatch(state, "Left")
+  cmp(state.selection.from, 4, "moved left onto image")
+  state = dispatch(state, "Left")
+  cmp(state.selection.head, 4, "moved left past")
+  cmp(state.selection.anchor, 4, "moved left past'")
+}, {doc: doc(p("foo", img, "bar"))})
+
+test("onto_block", state => {
+  state = textSel(state, 6)
+  dispatch(state, "Down")
+  cmp(state.selection.from, 7, "moved down onto hr")
+  state = textSel(state, 11)
+  dispatch(state, "Up")
+  cmp(state.selection.from, 7, "moved up onto hr")
+}, {doc: doc(p("hello"), hr, ul(li(p("there"))))})
+
+test("through_double_block", state => {
+  state = textSel(state, 7)
+  dispatch(state, "Down")
+  cmp(state.selection.from, 9, "moved down onto hr")
+  dispatch(state, "Down")
+  cmp(state.selection.from, 10, "moved down onto second hr")
+  state = textSel(state, 14)
+  dispatch(state, "Up")
+  cmp(state.selection.from, 10, "moved up onto second hr")
+  dispatch(state, "Up")
+  cmp(state.selection.from, 9, "moved up onto hr")
+}, {doc: doc(blockquote(p("hello")), hr, hr, p("there"))})
+
+test("horizontally_through_block", state => {
+  state = textSel(state, 4)
+  dispatch(state, "Right")
+  cmp(state.selection.from, 5, "right into first hr")
+  dispatch(state, "Right")
+  cmp(state.selection.from, 6, "right into second hr")
+  dispatch(state, "Right")
+  cmp(state.selection.head, 8, "right out of hr")
+  dispatch(state, "Left")
+  cmp(state.selection.from, 6, "left into second hr")
+  dispatch(state, "Left")
+  cmp(state.selection.from, 5, "left into first hr")
+  dispatch(state, "Left")
+  cmp(state.selection.head, 4, "left out of hr")
+}, {doc: doc(p("foo"), hr, hr, p("bar"))})
+
+test("block_out_of_image", state => {
+  state = nodeSel(state, 4)
+  dispatch(state, "Down")
+  cmp(state.selection.from, 6, "down into hr")
+  state = nodeSel(state, 8)
+  dispatch(state, "Up")
+  cmp(state.selection.from, 6, "up into hr")
+}, {doc: doc(p("foo", img), hr, p(img, "bar"))})
+*/
