@@ -1,26 +1,25 @@
-const {historyPlugin} = require("../history")
-const {Configuration} = require("../config")
+const {history} = require("../history")
+const {makeStateClass} = require("../state")
 const {schema} = require("../schema-basic")
 const {sinkListItem, liftListItem, splitListItem} = require("../commands-list")
 const {liftEmptyBlock} = require("../commands")
 const {TextSelection} = require("../selection")
 
-const {makeState, doc, p, ul, li} = require("./build")
+const {selFor, doc, p, ul, li} = require("./build")
 const {is, cmpStr, cmpNode} = require("./cmp")
 const {defTest} = require("./tests")
 
-let config = new Configuration([historyPlugin()])
-let configPreserve = new Configuration([historyPlugin({preserveItems: true})])
+let State = makeStateClass([history()]), StatePreserve = makeStateClass([history({preserveItems: true})])
 
-function test(name, f, doc) {
+function test(name, f, doc, stateClass = State) {
   defTest("history_" + name, () => {
-    f(doc ? makeState(doc, config) : doc === false ? null : config.stateFromSchema(schema))
+    f(doc ? stateClass.fromDoc(doc, selFor(doc)) : stateClass.fromSchema(schema))
   })
 }
 
 function type(state, text) { return state.tr.replaceSelection(state.schema.text(text)).apply() }
-function undo(state) { return state.history.undo(state) }
-function redo(state) { return state.history.redo(state) }
+function undo(state) { return state.undo() }
+function redo(state) { return state.redo() }
 function cut(state) { return state.update({history: state.history.cut()}) }
 function compress(state) { return state.update({history: state.history.forceCompress()}) }
 
@@ -164,16 +163,14 @@ test("rebaseSelectionOnUndo", state => {
   cmpStr(state.selection.head, 6)
 })
 
-test("unsynced_overwrite", () => {
-  let state = configPreserve.stateFromSchema(schema)
+test("unsynced_overwrite", state => {
   state = cut(type(type(state, "a"), "b"))
   state = state.applySelection(new TextSelection(state.doc.resolve(1), state.doc.resolve(3)))
   state = undo(undo(type(state, "c")))
   cmpNode(state.doc, doc(p()))
-}, false)
+}, null, StatePreserve)
 
-test("unsynced_list_manip", () => {
-  let state = makeState(doc(ul(li(p("hello<a>")))), configPreserve)
+test("unsynced_list_manip", state => {
   state = splitListItem(state.schema.nodes.list_item)(state)
   state = sinkListItem(state.schema.nodes.list_item)(state)
   state = cut(type(state, "abc"))
@@ -184,10 +181,9 @@ test("unsynced_list_manip", () => {
   cmpNode(state.doc, doc(ul(li(p("hello"), ul(li(p("abc")))))))
   state = undo(state)
   cmpNode(state.doc, doc(ul(li(p("hello")))))
-}, false)
+}, doc(ul(li(p("hello<a>")))), StatePreserve)
 
-test("unsynced_list_indent", () => {
-  let state = makeState(doc(ul(li(p("hello<a>")))), configPreserve)
+test("unsynced_list_indent", state => {
   state = splitListItem(state.schema.nodes.list_item)(state)
   state = sinkListItem(state.schema.nodes.list_item)(state)
   state = cut(type(state, "abc"))
@@ -209,4 +205,4 @@ test("unsynced_list_indent", () => {
   cmpNode(state.doc, doc(ul(li(p("hello"), ul(li(p("abc"), ul(li(p("def")))))))))
   state = redo(state)
   cmpNode(state.doc, doc(ul(li(p("hello")), li(p("abc"), ul(li(p("def")))))))
-}, false)
+}, doc(ul(li(p("hello<a>")))), StatePreserve)

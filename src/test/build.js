@@ -1,7 +1,6 @@
 const {schema} = require("../schema-basic")
 const {Node} = require("../model")
 const {TextSelection, NodeSelection} = require("../selection")
-const {EditorState} = require("../state")
 
 // This file defines a set of helpers for building up documents to be
 // used in the test suite. You can say, for example, `doc(p("foo"))`
@@ -117,12 +116,12 @@ exports.a = a
 const a2 = mark("link", {href: "http://bar"})
 exports.a2 = a2
 
-exports.makeState = function(doc, config) {
-  let selection, a = doc.tag.a
+exports.selFor = function(doc) {
+  let a = doc.tag.a
   if (a != null) {
     let $a = doc.resolve(a)
-    if ($a.parent.isTextblock) selection = new TextSelection($a, doc.tag.b != null ? doc.resolve(doc.tag.b) : undefined)
-    else selection = new NodeSelection($a)
+    if ($a.parent.isTextblock) return new TextSelection($a, doc.tag.b != null ? doc.resolve(doc.tag.b) : undefined)
+    else return new NodeSelection($a)
   }
-  return config ? config.stateFromDoc(doc, selection) : EditorState.fromDoc(doc, selection)
+  return Selection.atStart(doc)
 }
