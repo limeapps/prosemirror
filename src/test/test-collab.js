@@ -1,8 +1,7 @@
 const {collab} = require("../collab")
 const {history} = require("../history")
-const {makeStateClass} = require("../state")
+const {makeStateClass, Selection} = require("../state")
 const {schema} = require("../schema-basic")
-const {Selection} = require("../selection")
 
 const {doc, p} = require("./build")
 const {defTest} = require("./tests")

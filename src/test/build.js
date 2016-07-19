@@ -1,6 +1,6 @@
 const {schema} = require("../schema-basic")
 const {Node} = require("../model")
-const {TextSelection, NodeSelection} = require("../selection")
+const {TextSelection, NodeSelection} = require("../state")
 
 // This file defines a set of helpers for building up documents to be
 // used in the test suite. You can say, for example, `doc(p("foo"))`

@@ -1,9 +1,8 @@
 const {history} = require("../history")
-const {makeStateClass} = require("../state")
+const {makeStateClass, TextSelection} = require("../state")
 const {schema} = require("../schema-basic")
 const {sinkListItem, liftListItem, splitListItem} = require("../commands-list")
 const {liftEmptyBlock} = require("../commands")
-const {TextSelection} = require("../selection")
 
 const {selFor, doc, p, ul, li} = require("./build")
 const {is, cmpStr, cmpNode} = require("./cmp")

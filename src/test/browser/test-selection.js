@@ -1,6 +1,6 @@
 const {namespace} = require("./def")
 const {doc, blockquote, p, em, img, strong, code, br, hr} = require("../build")
-const {cmp, cmpNode, gt} = require("../cmp")
+const {cmp, gt} = require("../cmp")
 
 function allPositions(doc) {
   let found = []

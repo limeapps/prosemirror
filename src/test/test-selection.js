@@ -2,10 +2,9 @@ const {doc, blockquote, pre, p, li, ul, img, br, hr} = require("./build")
 const {cmp, cmpNode, is} = require("./cmp")
 const {defTest} = require("./tests")
 
-const {makeStateClass} = require("../state")
+const {makeStateClass, TextSelection, NodeSelection} = require("../state")
 const {schema} = require("../schema-basic")
-const {TextSelection, NodeSelection} = require("../selection")
-const {selectParentNode, lift, joinDown, joinUp, deleteSelection, baseKeymap} = require("../commands")
+const {selectParentNode, lift, joinDown, joinUp, deleteSelection} = require("../commands")
 
 const State = makeStateClass([])
 
