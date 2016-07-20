@@ -1,46 +1,40 @@
 const {defTest} = require("../tests")
-const {ProseMirror} = require("../../edit")
+const {selFor} = require("../build")
+const {EditorView} = require("../../view")
+const {baseConfig} = require("../../state")
 const {schema} = require("../../schema-basic")
 const {baseKeymap} = require("../../commands")
 
-let tempPMs = null
+let tempViews = null
 
-function tempEditors(options) {
+function tempEditors(conf, props) {
   let space = document.querySelector("#workspace")
-  if (tempPMs) {
-    tempPMs.forEach(pm => space.removeChild(pm.view.wrapper))
-    tempPMs = null
+  if (tempViews) {
+    tempViews.forEach(tempView => space.removeChild(tempView.wrapper))
+    tempViews = null
   }
-  return tempPMs = options.map(options => {
-    if (!options) options = {}
-    options.place = space
-    if (!options.doc) options.schema = schema
-    if (!options.keymaps) options.keymaps = [baseKeymap]
-    let pm = new ProseMirror(options)
-    let a = options.doc && options.doc.tag && options.doc.tag.a
-    if (a != null) {
-      if (options.doc.resolve(a).parent.isTextblock) pm.setTextSelection(a, options.doc.tag.b)
-      else pm.setNodeSelection(a)
-    }
-    return pm
+
+  return tempViews = props.map(inProps => {
+    let props = {}
+    for (let n in inProps) props[n] = inProps[n]
+    if (!props.keymaps) props.keymaps = [baseKeymap]
+    let state = conf.createState({doc: props.doc, schema, selection: props.doc && selFor(props.doc)})
+    return new EditorView(space, state, props)
   })
 }
 exports.tempEditors = tempEditors
 
-function tempEditor(options) {
-  return tempEditors([options])[0]
+function tempEditor(conf = baseConfig, props = {}) {
+  return tempEditors(conf, [props])[0]
 }
 exports.tempEditor = tempEditor
 
 function namespace(space, defaults) {
-  return (name, f, options) => {
-    if (!options) options = {}
-    if (defaults) for (let opt in defaults)
-      if (!options.hasOwnProperty(opt)) options[opt] = defaults[opt]
-    defTest(space + "_" + name, () => f(tempEditor(options)))
+  return (name, f, props) => {
+    if (!props) props = {}
+    if (defaults) for (let prop in defaults)
+      if (!props.hasOwnProperty(prop)) props[prop] = defaults[prop]
+    defTest(space + "_" + name, () => f(tempEditor(props.conf, props)))
   }
 }
 exports.namespace = namespace
-
-function dispatch(pm, key) { pm.view.channel.key({keyName: key}) }
-exports.dispatch = dispatch

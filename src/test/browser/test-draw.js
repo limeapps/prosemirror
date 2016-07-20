@@ -4,49 +4,43 @@ const {cmp, cmpStr} = require("../cmp")
 
 const test = namespace("draw")
 
-test("update", pm => {
-  pm.tr.typeText("bar").apply()
-  pm.updateView()
-  cmpStr(pm.view.content.textContent, "barfoo")
+test("update", view => {
+  view.update(view.state.tr.typeText("bar").apply())
+  cmpStr(view.content.textContent, "barfoo")
 }, {doc: doc(p("foo"))})
 
-test("minimal_at_end", pm => {
-  let oldP = pm.view.content.querySelector("p")
-  pm.tr.typeText("!").apply()
-  pm.updateView()
-  cmp(pm.view.content.querySelector("p"), oldP)
+test("minimal_at_end", view => {
+  let oldP = view.content.querySelector("p")
+  view.update(view.state.tr.typeText("!").apply())
+  cmp(view.content.querySelector("p"), oldP)
 }, {doc: doc(h1("foo<a>"), p("bar"))})
 
-test("minimal_at_start", pm => {
-  let oldP = pm.view.content.querySelector("p")
-  pm.tr.insertText(2, "!").apply()
-  pm.updateView()
-  cmp(pm.view.content.querySelector("p"), oldP)
+test("minimal_at_start", view => {
+  let oldP = view.content.querySelector("p")
+  view.update(view.state.tr.insertText(2, "!").apply())
+  cmp(view.content.querySelector("p"), oldP)
 }, {doc: doc(p("foo"), h1("bar"))})
 
-test("minimal_around", pm => {
-  let oldP = pm.view.content.querySelector("p")
-  let oldPre = pm.view.content.querySelector("pre")
-  pm.tr.insertText(2, "!").apply()
-  pm.updateView()
-  cmp(pm.view.content.querySelector("p"), oldP)
-  cmp(pm.view.content.querySelector("pre"), oldPre)
+test("minimal_around", view => {
+  let oldP = view.content.querySelector("p")
+  let oldPre = view.content.querySelector("pre")
+  view.update(view.state.tr.insertText(2, "!").apply())
+  cmp(view.content.querySelector("p"), oldP)
+  cmp(view.content.querySelector("pre"), oldPre)
 }, {doc: doc(p("foo"), h1("bar"), pre("baz"))})
 
-test("minimal_on_split", pm => {
-  let oldP = pm.view.content.querySelector("p")
-  let oldPre = pm.view.content.querySelector("pre")
-  pm.tr.split(8).apply()
-  pm.updateView()
-  cmp(pm.view.content.querySelector("p"), oldP)
-  cmp(pm.view.content.querySelector("pre"), oldPre)
+test("minimal_on_split", view => {
+  let oldP = view.content.querySelector("p")
+  let oldPre = view.content.querySelector("pre")
+  view.update(view.state.tr.split(8).apply())
+  cmp(view.content.querySelector("p"), oldP)
+  cmp(view.content.querySelector("pre"), oldPre)
 }, {doc: doc(p("foo"), h1("bar"), pre("baz"))})
 
-test("minimal_on_join", pm => {
-  let oldP = pm.view.content.querySelector("p")
-  let oldPre = pm.view.content.querySelector("pre")
-  pm.tr.join(10).apply()
-  pm.updateView()
-  cmp(pm.view.content.querySelector("p"), oldP)
-  cmp(pm.view.content.querySelector("pre"), oldPre)
+test("minimal_on_join", view => {
+  let oldP = view.content.querySelector("p")
+  let oldPre = view.content.querySelector("pre")
+  view.update(view.state.tr.join(10).apply())
+  cmp(view.content.querySelector("p"), oldP)
+  cmp(view.content.querySelector("pre"), oldPre)
 }, {doc: doc(p("foo"), h1("bar"), h1("x"), pre("baz"))})
