@@ -1,6 +1,6 @@
 const {collab} = require("../collab")
 const {history} = require("../history")
-const {baseConfig, Selection} = require("../state")
+const {baseConfig} = require("../state")
 const {schema} = require("../schema-basic")
 
 const {doc, p} = require("./build")
@@ -60,7 +60,7 @@ class DummyServer {
 }
 
 function sel(near) {
-  return s => s.applySelection(Selection.near(s.doc.resolve(near)))
+  return s => s.applySelection(near)
 }
 function cutHist(s) {
   return s.update({history: s.history.cut()})

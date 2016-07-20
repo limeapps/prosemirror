@@ -18,8 +18,10 @@ function tempEditors(conf, props) {
     let props = {}
     for (let n in inProps) props[n] = inProps[n]
     if (!props.keymaps) props.keymaps = [baseKeymap]
+    if (!props.onChange) props.onChange = state => view.update(state)
     let state = conf.createState({doc: props.doc, schema, selection: props.doc && selFor(props.doc)})
-    return new EditorView(space, state, props)
+    let view = new EditorView(space, state, props)
+    return view
   })
 }
 exports.tempEditors = tempEditors

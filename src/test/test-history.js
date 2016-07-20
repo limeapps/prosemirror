@@ -107,7 +107,7 @@ test("ping_pong", state => {
   state = type(cut(type(type(state, "one"), " two")), " three")
     .tr.insertText(1, "zero ").apply()
   state = cut(state).tr.split(1).apply()
-  state = type(state.applySelection(new TextSelection(state.doc.resolve(1))), "top")
+  state = type(state.applySelection(1), "top")
   for (let i = 0; i < 6; i++) {
     let re = i % 2
     for (let j = 0; j < 4; j++)
@@ -129,7 +129,7 @@ test("ping_pong_unsynced", state => {
   state = type(state, " three")
     .tr.insertText(1, "zero ").apply()
   state = cut(state).tr.split(1).apply()
-  state = type(state.applySelection(new TextSelection(state.doc.resolve(1))), "top")
+  state = type(state.applySelection(1), "top")
     .tr.insertText(1, "yyy").apply({addToHistory: false})
     .tr.insertText(7, "zzz").apply({addToHistory: false})
   for (let i = 0; i < 3; i++) {
@@ -190,7 +190,7 @@ test("unsynced_list_indent", state => {
   state = splitListItem(state.schema.nodes.list_item)(state)
   state = sinkListItem(state.schema.nodes.list_item)(state)
   state = cut(type(state, "def"))
-  state = state.applySelection(new TextSelection(state.doc.resolve(12)))
+  state = state.applySelection(12)
   state = liftListItem(state.schema.nodes.list_item)(state)
   cmpNode(state.doc, doc(ul(li(p("hello")), li(p("abc"), ul(li(p("def")))))))
   state = undo(state)
