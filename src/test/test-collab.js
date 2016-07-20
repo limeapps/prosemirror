@@ -1,6 +1,6 @@
 const {collab} = require("../collab")
 const {history} = require("../history")
-const {EditorState, Selection} = require("../state")
+const {baseConfig, Selection} = require("../state")
 const {schema} = require("../schema-basic")
 
 const {doc, p} = require("./build")
@@ -66,13 +66,13 @@ function cutHist(s) {
   return s.update({history: s.history.cut()})
 }
 
-let State = EditorState.extend(collab()).extend(history({preserveItems: true}))
+let conf = baseConfig.extend([collab(), history({preserveItems: true})])
 
 function test(name, f, doc, n = 2) {
   defTest("collab_" + name, () => {
     let states = []
     for (let i = 0; i < n; i++)
-      states.push(doc ? State.fromDoc(doc) : State.fromSchema(schema))
+      states.push(conf.createState({doc, schema}))
     f(new DummyServer(states))
   })
 }

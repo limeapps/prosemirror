@@ -1,5 +1,5 @@
 const {history} = require("../history")
-const {EditorState, TextSelection} = require("../state")
+const {baseConfig, TextSelection} = require("../state")
 const {schema} = require("../schema-basic")
 const {sinkListItem, liftListItem, splitListItem} = require("../commands-list")
 const {liftEmptyBlock} = require("../commands")
@@ -8,12 +8,12 @@ const {selFor, doc, p, ul, li} = require("./build")
 const {is, cmpStr, cmpNode} = require("./cmp")
 const {defTest} = require("./tests")
 
-let State = EditorState.extend(history())
-let StatePreserve = EditorState.extend(history({preserveItems: true}))
+let conf = baseConfig.extend([history()])
+let confPreserve = baseConfig.extend([history({preserveItems: true})])
 
-function test(name, f, doc, stateClass = State) {
+function test(name, f, doc, testConf = conf) {
   defTest("history_" + name, () => {
-    f(doc ? stateClass.fromDoc(doc, selFor(doc)) : stateClass.fromSchema(schema))
+    f(testConf.createState({doc, schema, selection: doc && selFor(doc)}))
   })
 }
 
@@ -168,7 +168,7 @@ test("unsynced_overwrite", state => {
   state = state.applySelection(new TextSelection(state.doc.resolve(1), state.doc.resolve(3)))
   state = undo(undo(type(state, "c")))
   cmpNode(state.doc, doc(p()))
-}, null, StatePreserve)
+}, null, confPreserve)
 
 test("unsynced_list_manip", state => {
   state = splitListItem(state.schema.nodes.list_item)(state)
@@ -181,7 +181,7 @@ test("unsynced_list_manip", state => {
   cmpNode(state.doc, doc(ul(li(p("hello"), ul(li(p("abc")))))))
   state = undo(state)
   cmpNode(state.doc, doc(ul(li(p("hello")))))
-}, doc(ul(li(p("hello<a>")))), StatePreserve)
+}, doc(ul(li(p("hello<a>")))), confPreserve)
 
 test("unsynced_list_indent", state => {
   state = splitListItem(state.schema.nodes.list_item)(state)
@@ -205,4 +205,4 @@ test("unsynced_list_indent", state => {
   cmpNode(state.doc, doc(ul(li(p("hello"), ul(li(p("abc"), ul(li(p("def")))))))))
   state = redo(state)
   cmpNode(state.doc, doc(ul(li(p("hello")), li(p("abc"), ul(li(p("def")))))))
-}, doc(ul(li(p("hello<a>")))), StatePreserve)
+}, doc(ul(li(p("hello<a>")))), confPreserve)
