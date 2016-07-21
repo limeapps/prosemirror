@@ -18,7 +18,11 @@ function onAction(action) {
 
 let view = new EditorView(place, state, {
   onAction,
-  config
+  config,
+  onKey(state, keyName) {
+    let found = baseKeymap.lookup(keyName)
+    return found && found(state, onAction)
+  }
 })
 /*let menuBar = new MenuBar(view, state, {
   content: [[liftItem, selectParentNodeItem], [undoItem, redoItem]],
