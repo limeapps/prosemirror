@@ -15,12 +15,13 @@ function onChange(state) {
   menuBar.update(state)
 }
 
-let menuBar = new MenuBar(place, state, {
-  content: [[liftItem, selectParentNodeItem], [undoItem, redoItem]],
-  onChange
-})
 let view = new EditorView(place, state, {
   keymaps: [baseKeymap],
   onChange,
   config
+})
+let menuBar = new MenuBar(view, state, {
+  content: [[liftItem, selectParentNodeItem], [undoItem, redoItem]],
+  float: true,
+  onChange
 })
