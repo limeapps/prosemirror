@@ -11,109 +11,117 @@ function findRow($pos, pred) {
   return -1
 }
 
-// :: (EditorState, ?bool) → ?EditorState
+// :: (EditorState, onAction: ?(action: Object)) → bool
 // Command function that adds a column before the column with the
 // selection.
-function addColumnBefore(state, apply) {
+function addColumnBefore(state, onAction) {
   let $from = state.selection.$from, cellFrom
   let rowDepth = findRow($from, d => cellFrom = d == $from.depth ? $from.nodeBefore : $from.node(d + 1))
-  if (rowDepth == -1) return null
-  if (apply === false) return state
-  return state.tr.step(AddColumnStep.create(state.doc, $from.before(rowDepth - 1), $from.index(rowDepth),
-                                            cellFrom.type, cellFrom.attrs)).apply()
+  if (rowDepth == -1) return false
+  if (onAction)
+    onAction(state.tr.step(AddColumnStep.create(state.doc, $from.before(rowDepth - 1), $from.index(rowDepth),
+                                                cellFrom.type, cellFrom.attrs)).action())
+  return true
 }
 exports.addColumnBefore = addColumnBefore
 
-// :: (EditorState, ?bool) → ?EditorState
+// :: (EditorState, onAction: ?(action: Object)) → bool
 // Command function that adds a column after the column with the
 // selection.
-function addColumnAfter(state, apply) {
+function addColumnAfter(state, onAction) {
   let $from = state.selection.$from, cellFrom
   let rowDepth = findRow($from, d => cellFrom = d == $from.depth ? $from.nodeAfter : $from.node(d + 1))
-  if (rowDepth == -1) return null
-  if (apply === false) return state
-  return state.tr.step(AddColumnStep.create(state.doc, $from.before(rowDepth - 1),
-                                            $from.indexAfter(rowDepth) + (rowDepth == $from.depth ? 1 : 0),
-                                            cellFrom.type, cellFrom.attrs)).apply()
+  if (rowDepth == -1) return false
+  if (onAction)
+    onAction(state.tr.step(AddColumnStep.create(state.doc, $from.before(rowDepth - 1),
+                                                $from.indexAfter(rowDepth) + (rowDepth == $from.depth ? 1 : 0),
+                                                cellFrom.type, cellFrom.attrs)).action())
+  return true
 }
 exports.addColumnAfter = addColumnAfter
 
-// :: (EditorState, ?bool) → ?EditorState
+// :: (EditorState, onAction: ?(action: Object)) → bool
 // Command function that removes the column with the selection.
-function removeColumn(state, apply) {
+function removeColumn(state, onAction) {
   let $from = state.selection.$from
   let rowDepth = findRow($from, d => $from.node(d).childCount > 1)
-  if (rowDepth == -1) return null
-  if (apply === false) return state
-  return state.tr.step(RemoveColumnStep.create(state.doc, $from.before(rowDepth - 1), $from.index(rowDepth))).apply()
+  if (rowDepth == -1) return false
+  if (onAction)
+    onAction(state.tr.step(RemoveColumnStep.create(state.doc, $from.before(rowDepth - 1), $from.index(rowDepth))).action())
+  return true
 }
 exports.removeColumn = removeColumn
 
-function addRow(state, apply, side) {
+function addRow(state, onAction, side) {
   let $from = state.selection.$from
   let rowDepth = findRow($from)
-  if (rowDepth == -1) return null
-  if (apply === false) return state
-  let exampleRow = $from.node(rowDepth)
-  let cells = [], pos = side < 0 ? $from.before(rowDepth) : $from.after(rowDepth)
-  exampleRow.forEach(cell => cells.push(cell.type.createAndFill(cell.attrs)))
-  let row = exampleRow.copy(Fragment.from(cells))
-  return state.tr.step(new ReplaceStep(pos, pos, new Slice(Fragment.from(row), 0, 0))).apply()
+  if (rowDepth == -1) return false
+  if (onAction) {
+    let exampleRow = $from.node(rowDepth)
+    let cells = [], pos = side < 0 ? $from.before(rowDepth) : $from.after(rowDepth)
+    exampleRow.forEach(cell => cells.push(cell.type.createAndFill(cell.attrs)))
+    let row = exampleRow.copy(Fragment.from(cells))
+    onAction(state.tr.step(new ReplaceStep(pos, pos, new Slice(Fragment.from(row), 0, 0))).action())
+  }
+  return true
 }
 
-// :: (EditorState, ?bool) → ?EditorState
+// :: (EditorState, onAction: ?(action: Object)) → bool
 // Command function that adds a row after the row with the
 // selection.
-function addRowBefore(state, apply) {
-  return addRow(state, apply, -1)
+function addRowBefore(state, onAction) {
+  return addRow(state, onAction, -1)
 }
 exports.addRowBefore = addRowBefore
 
-// :: (EditorState, ?bool) → ?EditorState
+// :: (EditorState, onAction: ?(action: Object)) → bool
 // Command function that adds a row before the row with the
 // selection.
-function addRowAfter(state, apply) {
-  return addRow(state, apply, 1)
+function addRowAfter(state, onAction) {
+  return addRow(state, onAction, 1)
 }
 exports.addRowAfter = addRowAfter
 
-// :: (EditorState, ?bool) → ?EditorState
+// :: (EditorState, onAction: ?(action: Object)) → bool
 // Command function that removes the row with the selection.
-function removeRow(state, apply) {
+function removeRow(state, onAction) {
   let $from = state.selection.$from
   let rowDepth = findRow($from, d => $from.node(d - 1).childCount > 1)
-  if (rowDepth == -1) return null
-  if (apply === false) return state
-  return state.tr.step(new ReplaceStep($from.before(rowDepth), $from.after(rowDepth), Slice.empty)).apply()
+  if (rowDepth == -1) return false
+  if (onAction)
+    onAction(state.tr.step(new ReplaceStep($from.before(rowDepth), $from.after(rowDepth), Slice.empty)).action())
+  return true
 }
 exports.removeRow = removeRow
 
-function moveCell(state, dir, apply) {
+function moveCell(state, dir, onAction) {
   let {$from} = state.selection
   let rowDepth = findRow($from)
-  if (rowDepth == -1) return null
+  if (rowDepth == -1) return false
   let row = $from.node(rowDepth), newIndex = $from.index(rowDepth) + dir
   if (newIndex >= 0 && newIndex < row.childCount) {
     let $cellStart = state.doc.resolve(row.content.offsetAt(newIndex) + $from.start(rowDepth))
     let sel = Selection.findFrom($cellStart, 1)
-    if (!sel || sel.from >= $cellStart.end()) return null
-    return apply === false ? state : state.applySelection(sel)
+    if (!sel || sel.from >= $cellStart.end()) return false
+    if (onAction) onAction(sel.action())
+    return true
   } else {
     let rowIndex = $from.index(rowDepth - 1) + dir, table = $from.node(rowDepth - 1)
-    if (rowIndex < 0 || rowIndex >= table.childCount) return null
+    if (rowIndex < 0 || rowIndex >= table.childCount) return false
     let cellStart = dir > 0 ? $from.after(rowDepth) + 2 : $from.before(rowDepth) - 2 - table.child(rowIndex).lastChild.content.size
     let $cellStart = state.doc.resolve(cellStart), sel = Selection.findFrom($cellStart, 1)
-    if (!sel || sel.from >= $cellStart.end()) return null
-    return apply === false ? state : state.applySelection(sel)
+    if (!sel || sel.from >= $cellStart.end()) return false
+    if (onAction) onAction(sel.action())
+    return true
   }
 }
 
-// :: (EditorState, ?bool) → ?EditorState
+// :: (EditorState, onAction: ?(action: Object)) → bool
 // Move to the next cell in the current table, if there is one.
-function selectNextCell(state, apply) { return moveCell(state, 1, apply) }
+function selectNextCell(state, onAction) { return moveCell(state, 1, onAction) }
 exports.selectNextCell = selectNextCell
 
-// :: (EditorState, ?bool) → ?EditorState
+// :: (EditorState, onAction: ?(action: Object)) → bool
 // Move to the previous cell in the current table, if there is one.
-function selectPreviousCell(state, apply) { return moveCell(state, -1, apply) }
+function selectPreviousCell(state, onAction) { return moveCell(state, -1, onAction) }
 exports.selectPreviousCell = selectPreviousCell
