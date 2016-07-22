@@ -46,7 +46,10 @@ class DelayedTransform {
   }
 
   txt(text, at) {
-    return this.plus(tr => tr.insertText(tag(tr, at || "a"), text))
+    return this.plus(tr => {
+      let pos = tag(tr, at || "a")
+      return tr.insert(pos, tr.doc.type.schema.text(text, tr.doc.marksAt(pos)))
+    })
   }
 
   join(at) {

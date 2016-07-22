@@ -2,11 +2,11 @@ const commands = require("../commands")
 const listCommands = require("../commands-list")
 const {Schema} = require("../model")
 const {schema, Heading, Doc} = require("../schema-basic")
-const {baseConfig} = require("../state")
 
 const {defTest} = require("./tests")
 const {cmpNode, is} = require("./cmp")
-const {selFor, doc, blockquote, pre, h1, h2, p, li, ol, ul, em, hr} = require("./build")
+const {doc, blockquote, pre, h1, h2, p, li, ol, ul, em, hr} = require("./build")
+const {TestState} = require("./state")
 
 const used = Object.create(null)
 const n = schema.nodes
@@ -14,18 +14,13 @@ const n = schema.nodes
 function test(cmd, ...args) {
   let known = used[cmd] || 0
   defTest("command_" + cmd + "_" + known, () => {
-    let doc = args[args.length - 2]
-    let state = baseConfig.createState({doc, selection: selFor(args[args.length - 2])})
+    let expected = args[args.length - 1]
+    let state = new TestState({doc: args[args.length - 2]})
     let f = commands[cmd] || listCommands[cmd]
     let prep = args.slice(0, args.length - 2)
     if (prep.length) f = f(...prep)
-    let newState = f(state), expected = args[args.length - 1]
-    if (expected) {
-      is(newState, "null returned")
-      cmpNode(newState.doc, expected)
-    } else {
-      is(!newState, "state returned")
-    }
+    state.command(f)
+    cmpNode(state.doc, expected || args[args.length - 2])
   })
   used[cmd] = known + 1
 }

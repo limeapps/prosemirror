@@ -1,6 +1,5 @@
 const {schema} = require("../schema-basic")
 const {Node} = require("../model")
-const {Selection, TextSelection, NodeSelection} = require("../state")
 
 // This file defines a set of helpers for building up documents to be
 // used in the test suite. You can say, for example, `doc(p("foo"))`
@@ -115,13 +114,3 @@ const a = mark("link", {href: "http://foo"})
 exports.a = a
 const a2 = mark("link", {href: "http://bar"})
 exports.a2 = a2
-
-exports.selFor = function(doc) {
-  let a = doc.tag.a
-  if (a != null) {
-    let $a = doc.resolve(a)
-    if ($a.parent.isTextblock) return new TextSelection($a, doc.tag.b != null ? doc.resolve(doc.tag.b) : undefined)
-    else return new NodeSelection($a)
-  }
-  return Selection.atStart(doc)
-}
