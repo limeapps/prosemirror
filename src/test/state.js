@@ -1,4 +1,4 @@
-const {EditorState, TextSelection, NodeSelection} = require("../state")
+const {EditorState, Selection, TextSelection, NodeSelection} = require("../state")
 
 function selFor(doc) {
   let a = doc.tag.a
