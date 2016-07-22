@@ -78,8 +78,9 @@ test("detect_enter", view => {
   let bq = view.content.querySelector("blockquote")
   bq.appendChild(document.createElement("p"))
   readInputChange(view, view.state)
-  cmpNode(view.state.doc, doc(blockquote(p("foo")), p()))
-}, {doc: doc(blockquote(p("foo"), p("<a>")))})
+  cmp(view.enterPressed, true)
+}, {doc: doc(blockquote(p("foo"), p("<a>"))),
+    onKey: (view, key) => { if (key == "Enter") return view.enterPressed = true }})
 
 test("composition_simple", view => {
   findTextNode(view.content, "hello").nodeValue = "hellox"

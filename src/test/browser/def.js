@@ -3,7 +3,6 @@ const {selFor} = require("../state")
 const {EditorView} = require("../../view")
 const {EditorState} = require("../../state")
 const {schema} = require("../../schema-basic")
-const {baseKeymap} = require("../../commands")
 
 let tempViews = null
 
@@ -17,10 +16,6 @@ function tempEditors(props) {
   return tempViews = props.map(inProps => {
     let props = {}, view
     for (let n in inProps) props[n] = inProps[n]
-    if (!props.onKey) props.onKey = (state, key) => {
-      let found = baseKeymap.lookup(key)
-      if (found) return found(state, view.props.onAction)
-    }
     if (!props.onAction) props.onAction = action => view.update(view.state.applyAction(action))
     let state = EditorState.create({doc: props.doc, schema,
                                     selection: props.doc && selFor(props.doc),
