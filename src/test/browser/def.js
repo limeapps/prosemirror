@@ -15,14 +15,17 @@ function tempEditors(props) {
   }
 
   return tempViews = props.map(inProps => {
-    let props = {}
+    let props = {}, view
     for (let n in inProps) props[n] = inProps[n]
-    if (!props.keymaps) props.keymaps = [baseKeymap]
+    if (!props.onKey) props.onKey = (state, key) => {
+      let found = baseKeymap.lookup(key)
+      if (found) return found(state, view.props.onAction)
+    }
     if (!props.onAction) props.onAction = action => view.update(view.state.applyAction(action))
     let state = EditorState.create({doc: props.doc, schema,
                                     selection: props.doc && selFor(props.doc),
                                     plugins: props.plugins})
-    let view = new EditorView(space, state, props)
+    view = new EditorView(space, state, props)
     return view
   })
 }
