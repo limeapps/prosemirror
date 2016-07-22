@@ -4,7 +4,7 @@ const {Schema} = require("../model")
 const {schema, Heading, Doc} = require("../schema-basic")
 
 const {defTest} = require("./tests")
-const {cmpNode, is} = require("./cmp")
+const {cmpNode} = require("./cmp")
 const {doc, blockquote, pre, h1, h2, p, li, ol, ul, em, hr} = require("./build")
 const {TestState} = require("./state")
 

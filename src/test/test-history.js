@@ -1,5 +1,4 @@
 const {history} = require("../history")
-const {baseConfig} = require("../state")
 const {schema} = require("../schema-basic")
 const {sinkListItem, liftListItem, splitListItem} = require("../commands-list")
 const {liftEmptyBlock} = require("../commands")
@@ -72,6 +71,7 @@ function unsyncedComplex(state, doCompress) {
   cmpNode(state.doc, doc(p(".."), p("..hello!")))
   state.apply(state.tr.split(2).action({addToHistory: false}))
   if (doCompress) compress(state)
+  state.undo()
   state.undo()
   cmpNode(state.doc, doc(p("."), p("...hello")))
   state.undo()

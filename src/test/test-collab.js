@@ -1,28 +1,36 @@
 const {collab} = require("../collab")
+const {EditorState, Selection} = require("../state")
 const {history} = require("../history")
-const {baseConfig} = require("../state")
 const {schema} = require("../schema-basic")
 
 const {doc, p} = require("./build")
 const {defTest} = require("./tests")
 const {cmpNode, cmp} = require("./cmp")
 
+const histPlugin = history({preserveItems: true})
+
 class DummyServer {
-  constructor(states) {
-    this.states = states
+  constructor(doc, n) {
+    this.states = []
+    this.collab = []
+    for (let i = 0; i < n; i++) {
+      let plugin = collab()
+      this.collab.push(plugin)
+      this.states.push(EditorState.create({doc, schema, plugins: [histPlugin, plugin]}))
+    }
     this.steps = []
     this.clientIDs = []
     this.delayed = []
   }
 
-  sync(state) {
-    let version = state.collab.version
-    if (version == this.steps.length) return state
-    return state.collabReceive(this.steps.slice(version), this.clientIDs.slice(version))
+  sync(n) {
+    let state = this.states[n], version = state.collab.version
+    if (version != this.steps.length)
+      this.states[n] = state.applyAction(this.collab[n].receiveAction(state, this.steps.slice(version), this.clientIDs.slice(version)))
   }
 
-  send(state) {
-    let sendable = state.collab.sendableSteps()
+  send(n) {
+    let sendable = this.collab[n].sendableSteps(this.states[n])
     if (sendable && sendable.version == this.steps.length) {
       this.steps = this.steps.concat(sendable.steps)
       for (let i = 0; i < sendable.steps.length; i++) this.clientIDs.push(sendable.clientID)
@@ -31,19 +39,26 @@ class DummyServer {
 
   broadcast(n) {
     if (this.delayed.indexOf(n) > -1) return
-    this.states[n] = this.sync(this.states[n])
-    this.send(this.states[n])
-    for (let i = 0; i < this.states.length; i++) if (i != n)
-      this.states[i] = this.sync(this.states[i])
+    this.sync(n)
+    this.send(n)
+    for (let i = 0; i < this.states.length; i++) if (i != n) this.sync(i)
   }
 
   update(n, f) {
-    this.states[n] = f(this.states[n])
+    this.states[n] = this.states[n].applyAction(f(this.states[n]))
     this.broadcast(n)
   }
 
   type(n, text, pos) {
-    this.update(n, s => s.tr.insertText(pos || s.selection.head, text).apply())
+    this.update(n, s => s.tr.insertText(text, pos || s.selection.head).action())
+  }
+
+  undo(n) {
+    histPlugin.undo(this.states[n], a => this.update(n, () => a))
+  }
+
+  redo(n) {
+    histPlugin.redo(this.states[n], a => this.update(n, () => a))
   }
 
   conv(d) {
@@ -60,20 +75,13 @@ class DummyServer {
 }
 
 function sel(near) {
-  return s => s.applySelection(near)
+  return s => Selection.near(s.doc.resolve(near)).action()
 }
-function cutHist(s) {
-  return s.update({history: s.history.cut()})
-}
-
-let conf = baseConfig.extend([collab(), history({preserveItems: true})])
+function closeHist() { return {type: "historyClose"} }
 
 function test(name, f, doc, n = 2) {
   defTest("collab_" + name, () => {
-    let states = []
-    for (let i = 0; i < n; i++)
-      states.push(conf.createState({doc, schema}))
-    f(new DummyServer(states))
+    f(new DummyServer(doc, n))
   })
 }
 
@@ -122,7 +130,7 @@ test("undo_basic", s => {
   s.type(0, "A")
   s.type(1, "B")
   s.type(0, "C")
-  s.update(1, s => s.undo(s))
+  s.undo(1)
   s.conv("AC")
   s.type(1, "D")
   s.type(0, "E")
@@ -133,8 +141,8 @@ test("redo_basic", s => {
   s.type(0, "A")
   s.type(1, "B")
   s.type(0, "C")
-  s.update(1, s => s.undo(s))
-  s.update(1, s => s.redo(s))
+  s.undo(1)
+  s.redo(1)
   s.type(1, "D")
   s.type(0, "E")
   s.conv("ABCDE")
@@ -145,27 +153,27 @@ test("undo_deep", s => {
   s.update(1, sel(11))
   s.type(0, "!")
   s.type(1, "!")
-  s.update(0, cutHist)
+  s.update(0, closeHist)
   s.delay(0, () => {
     s.type(0, " ...")
     s.type(1, " ,,,")
   })
-  s.update(0, cutHist)
+  s.update(0, closeHist)
   s.type(0, "*")
   s.type(1, "*")
-  s.update(0, s => s.undo(s))
+  s.undo(0)
   s.conv(doc(p("hello! ..."), p("bye! ,,,*")))
-  s.update(0, s => s.undo(s))
-  s.update(0, s => s.undo(s))
+  s.undo(0)
+  s.undo(0)
   s.conv(doc(p("hello"), p("bye! ,,,*")))
-  s.update(0, s => s.redo(s))
-  s.update(0, s => s.redo(s))
-  s.update(0, s => s.redo(s))
+  s.redo(0)
+  s.redo(0)
+  s.redo(0)
   s.conv(doc(p("hello! ...*"), p("bye! ,,,*")))
-  s.update(0, s => s.undo(s))
-  s.update(0, s => s.undo(s))
+  s.undo(0)
+  s.undo(0)
   s.conv(doc(p("hello!"), p("bye! ,,,*")))
-  s.update(1, s => s.undo(s))
+  s.undo(1)
   s.conv(doc(p("hello!"), p("bye")))
 }, doc(p("hello"), p("bye")))
 
@@ -176,10 +184,11 @@ test("undo_deleted_event", s => {
     s.type(0, "B", 4)
     s.type(0, "C", 5)
     s.type(0, "D", 1)
-    s.update(1, s => s.tr.delete(2, 5).apply())
+    s.update(1, s => s.tr.delete(2, 5).action())
   })
   s.conv("DhoA")
-  s.update(0, s => s.undo(s))
+  s.undo(0)
+  s.undo(0)
   s.conv("ho")
   cmp(s.states[0].selection.head, 3)
 }, doc(p("hello")))

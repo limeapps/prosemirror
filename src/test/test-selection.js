@@ -3,7 +3,6 @@ const {cmp, cmpNode, is} = require("./cmp")
 const {defTest} = require("./tests")
 const {TestState} = require("./state")
 
-const {TextSelection, NodeSelection} = require("../state")
 const {schema} = require("../schema-basic")
 const {selectParentNode, lift, joinDown, joinUp, deleteSelection} = require("../commands")
 
