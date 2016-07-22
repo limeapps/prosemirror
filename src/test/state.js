@@ -9,6 +9,7 @@ function selFor(doc) {
   }
   return Selection.atStart(doc)
 }
+exports.selFor = selFor
 
 exports.TestState = class TestState {
   constructor(config) {

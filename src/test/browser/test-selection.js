@@ -1,7 +1,7 @@
 const {namespace} = require("./def")
 const {doc, blockquote, p, em, img, strong, code, br, hr, ul, li} = require("../build")
 const {cmp, gt} = require("../cmp")
-const {NodeSelection} = require("../../state")
+const {Selection, NodeSelection} = require("../../state")
 
 function allPositions(doc) {
   let found = []
@@ -30,7 +30,7 @@ function findTextNode(node, text) {
 }
 exports.findTextNode = findTextNode
 
-function setSel(node, offset) {
+function setDOMSel(node, offset) {
   let range = document.createRange()
   range.setEnd(node, offset)
   range.setStart(node, offset)
@@ -43,7 +43,7 @@ test("read", view => {
   // disabled when the document doesn't have focus, since that causes this to fail
   if (!document.hasFocus()) return
   function test(node, offset, expected, comment) {
-    setSel(node, offset)
+    setDOMSel(node, offset)
     view.selectionReader.readFromDOM()
     let sel = view.state.selection
     cmp(sel.head == null ? sel.from : sel.head, expected, comment)
@@ -79,11 +79,16 @@ function getSel() {
   return {node: node, offset: offset}
 }
 
+function setSel(view, sel) {
+  if (typeof sel == "number") sel = Selection.near(view.state.doc.resolve(sel))
+  view.props.onAction(sel.action())
+}
+
 test("set", view => {
   // disabled when the document doesn't have focus, since that causes this to fail
   if (!document.hasFocus()) return
   function test(pos, node, offset) {
-    view.update(view.state.applySelection(pos))
+    setSel(view, pos)
     let sel = getSel()
     cmp(sel.node, node, pos)
     cmp(sel.offset, offset, pos)
@@ -128,7 +133,7 @@ test("coords_cornercases", view => {
     let coords = view.coordsAtPos(pos)
     let found = view.posAtCoords(coords).pos
     cmp(found, pos)
-    view.update(view.state.applySelection(pos))
+    setSel(view, pos)
   })
 }, {
   doc: doc(p("one", em("two", strong("three"), img), br, code("foo")), p())
@@ -147,7 +152,7 @@ test("coords_round_trip", view => {
 test("pos_at_coords_after_wrapped", view => {
   let top = view.coordsAtPos(1), pos = 1, end
   for (let i = 0; i < 100; i++) {
-    view.update(view.state.tr.typeText("abc def ghi ").apply())
+    view.props.onAction(view.state.tr.insertText("abc def ghi ").action())
     pos += 12
     end = view.coordsAtPos(pos)
     if (end.bottom > top.bottom + 4) break
@@ -155,64 +160,59 @@ test("pos_at_coords_after_wrapped", view => {
   cmp(view.posAtCoords({left: end.left + 50, top: end.top + 5}).pos, pos)
 })
 
-function dispatch(view, key) {
-  let updated = view.applyKey(key)
-  if (updated) view.props.onChange(updated)
-}
-
 test("through_inline_node", view => {
-  dispatch(view, "Right")
+  view.dispatchKey("Right")
   cmp(view.state.selection.from, 4, "moved right onto image")
-  dispatch(view, "Right")
+  view.dispatchKey("Right")
   cmp(view.state.selection.head, 5, "moved right past")
   cmp(view.state.selection.anchor, 5, "moved right past'")
-  dispatch(view, "Left")
+  view.dispatchKey("Left")
   cmp(view.state.selection.from, 4, "moved left onto image")
-  dispatch(view, "Left")
+  view.dispatchKey("Left")
   cmp(view.state.selection.head, 4, "moved left past")
   cmp(view.state.selection.anchor, 4, "moved left past'")
 }, {doc: doc(p("foo<a>", img, "bar"))})
 
 test("onto_block", view => {
-  dispatch(view, "Down")
+  view.dispatchKey("Down")
   cmp(view.state.selection.from, 7, "moved down onto hr")
-  view.update(view.state.applySelection(11))
-  dispatch(view, "Up")
+  setSel(view, 11)
+  view.dispatchKey("Up")
   cmp(view.state.selection.from, 7, "moved up onto hr")
 }, {doc: doc(p("hello<a>"), hr, ul(li(p("there"))))})
 
 test("through_double_block", view => {
-  dispatch(view, "Down")
+  view.dispatchKey("Down")
   cmp(view.state.selection.from, 9, "moved down onto hr")
-  dispatch(view, "Down")
+  view.dispatchKey("Down")
   cmp(view.state.selection.from, 10, "moved down onto second hr")
-  view.update(view.state.applySelection(14))
-  dispatch(view, "Up")
+  setSel(view, 14)
+  view.dispatchKey("Up")
   cmp(view.state.selection.from, 10, "moved up onto second hr")
-  dispatch(view, "Up")
+  view.dispatchKey("Up")
   cmp(view.state.selection.from, 9, "moved up onto hr")
 }, {doc: doc(blockquote(p("hello<a>")), hr, hr, p("there"))})
 
 test("horizontally_through_block", view => {
-  dispatch(view, "Right")
+  view.dispatchKey("Right")
   cmp(view.state.selection.from, 5, "right into first hr")
-  dispatch(view, "Right")
+  view.dispatchKey("Right")
   cmp(view.state.selection.from, 6, "right into second hr")
-  dispatch(view, "Right")
+  view.dispatchKey("Right")
   cmp(view.state.selection.head, 8, "right out of hr")
-  dispatch(view, "Left")
+  view.dispatchKey("Left")
   cmp(view.state.selection.from, 6, "left into second hr")
-  dispatch(view, "Left")
+  view.dispatchKey("Left")
   cmp(view.state.selection.from, 5, "left into first hr")
-  dispatch(view, "Left")
+  view.dispatchKey("Left")
   cmp(view.state.selection.head, 4, "left out of hr")
 }, {doc: doc(p("foo<a>"), hr, hr, p("bar"))})
 
 test("block_out_of_image", view => {
-  view.update(view.state.applySelection(new NodeSelection(view.state.doc.resolve(4))))
-  dispatch(view, "Down")
+  setSel(view, new NodeSelection(view.state.doc.resolve(4)))
+  view.dispatchKey("Down")
   cmp(view.state.selection.from, 6, "down into hr")
-  view.update(view.state.applySelection(new NodeSelection(view.state.doc.resolve(8))))
-  dispatch(view, "Up")
+  setSel(view, new NodeSelection(view.state.doc.resolve(8)))
+  view.dispatchKey("Up")
   cmp(view.state.selection.from, 6, "up into hr")
 }, {doc: doc(p("foo", img), hr, p(img, "bar"))})
