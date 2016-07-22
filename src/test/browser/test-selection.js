@@ -160,59 +160,67 @@ test("pos_at_coords_after_wrapped", view => {
   cmp(view.posAtCoords({left: end.left + 50, top: end.top + 5}).pos, pos)
 })
 
+function event(code) {
+  let event = document.createEvent("Event")
+  event.initEvent("keydown", true, true)
+  event.keyCode = code
+  return event
+}
+const LEFT = 37, RIGHT = 39, UP = 38, DOWN = 40
+
 test("through_inline_node", view => {
-  view.dispatchKey("Right")
+  view.dispatchKeyDown(event(RIGHT))
   cmp(view.state.selection.from, 4, "moved right onto image")
-  view.dispatchKey("Right")
+  view.dispatchKeyDown(event(RIGHT))
   cmp(view.state.selection.head, 5, "moved right past")
   cmp(view.state.selection.anchor, 5, "moved right past'")
-  view.dispatchKey("Left")
+  view.dispatchKeyDown(event(LEFT))
   cmp(view.state.selection.from, 4, "moved left onto image")
-  view.dispatchKey("Left")
+  view.dispatchKeyDown(event(LEFT))
   cmp(view.state.selection.head, 4, "moved left past")
   cmp(view.state.selection.anchor, 4, "moved left past'")
 }, {doc: doc(p("foo<a>", img, "bar"))})
 
 test("onto_block", view => {
-  view.dispatchKey("Down")
+  view.dispatchKeyDown(event(DOWN))
   cmp(view.state.selection.from, 7, "moved down onto hr")
   setSel(view, 11)
-  view.dispatchKey("Up")
+  view.dispatchKeyDown(event(UP))
   cmp(view.state.selection.from, 7, "moved up onto hr")
 }, {doc: doc(p("hello<a>"), hr, ul(li(p("there"))))})
 
 test("through_double_block", view => {
-  view.dispatchKey("Down")
+  view.dispatchKeyDown(event(DOWN))
   cmp(view.state.selection.from, 9, "moved down onto hr")
-  view.dispatchKey("Down")
+  view.dispatchKeyDown(event(DOWN))
   cmp(view.state.selection.from, 10, "moved down onto second hr")
   setSel(view, 14)
-  view.dispatchKey("Up")
+  view.dispatchKeyDown(event(UP))
   cmp(view.state.selection.from, 10, "moved up onto second hr")
-  view.dispatchKey("Up")
+  view.dispatchKeyDown(event(UP))
   cmp(view.state.selection.from, 9, "moved up onto hr")
 }, {doc: doc(blockquote(p("hello<a>")), hr, hr, p("there"))})
 
 test("horizontally_through_block", view => {
-  view.dispatchKey("Right")
+  view.dispatchKeyDown(event(RIGHT))
   cmp(view.state.selection.from, 5, "right into first hr")
-  view.dispatchKey("Right")
+  view.dispatchKeyDown(event(RIGHT))
   cmp(view.state.selection.from, 6, "right into second hr")
-  view.dispatchKey("Right")
+  view.dispatchKeyDown(event(RIGHT))
   cmp(view.state.selection.head, 8, "right out of hr")
-  view.dispatchKey("Left")
+  view.dispatchKeyDown(event(LEFT))
   cmp(view.state.selection.from, 6, "left into second hr")
-  view.dispatchKey("Left")
+  view.dispatchKeyDown(event(LEFT))
   cmp(view.state.selection.from, 5, "left into first hr")
-  view.dispatchKey("Left")
+  view.dispatchKeyDown(event(LEFT))
   cmp(view.state.selection.head, 4, "left out of hr")
 }, {doc: doc(p("foo<a>"), hr, hr, p("bar"))})
 
 test("block_out_of_image", view => {
   setSel(view, new NodeSelection(view.state.doc.resolve(4)))
-  view.dispatchKey("Down")
+  view.dispatchKeyDown(event(DOWN))
   cmp(view.state.selection.from, 6, "down into hr")
   setSel(view, new NodeSelection(view.state.doc.resolve(8)))
-  view.dispatchKey("Up")
+  view.dispatchKeyDown(event(UP))
   cmp(view.state.selection.from, 6, "up into hr")
 }, {doc: doc(p("foo", img), hr, p(img, "bar"))})
