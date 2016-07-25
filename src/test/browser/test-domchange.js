@@ -80,7 +80,7 @@ test("detect_enter", view => {
   readInputChange(view, view.state)
   cmp(view.enterPressed, true)
 }, {doc: doc(blockquote(p("foo"), p("<a>"))),
-    onKeyDown: (view, event) => { if (event.keyCode == 13) return view.enterPressed = true }})
+    handleKeyDown: (view, event) => { if (event.keyCode == 13) return view.enterPressed = true }})
 
 test("composition_simple", view => {
   findTextNode(view.content, "hello").nodeValue = "hellox"
