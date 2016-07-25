@@ -6,16 +6,15 @@ class FieldPrompt {
   // :: (ProseMirror, string, [Field])
   // Construct a prompt. Note that this does not
   // [open](#FieldPrompt.open) it yet.
-  constructor(pm, title, fields) {
-    this.pm = pm
-    this.title = title
-    this.fields = fields
+  constructor(view, props) {
+    this.view = view
+    this.props = props
     this.doClose = null
     this.domFields = []
-    for (let name in fields)
-      this.domFields.push(fields[name].render(pm))
+    for (let name in props.fields)
+      this.domFields.push(fields[name].render(view.state, props))
 
-    let promptTitle = elt("h5", {}, pm.translate(title))
+    let promptTitle = props.title && elt("h5", {}, translate(props, props.title))
     let submitButton = elt("button", {type: "submit", class: "ProseMirror-prompt-submit"}, "Ok")
     let cancelButton = elt("button", {type: "button", class: "ProseMirror-prompt-cancel"}, "Cancel")
     cancelButton.addEventListener("click", () => this.close())
@@ -39,10 +38,10 @@ class FieldPrompt {
   open(callback) {
     this.close()
     let prompt = this.prompt()
-    let hadFocus = this.pm.hasFocus()
+    let hadFocus = this.view.hasFocus()
     this.doClose = () => {
       prompt.close()
-      if (hadFocus) setTimeout(() => this.pm.focus(), 50)
+      if (hadFocus) setTimeout(() => this.view.focus(), 50)
     }
 
     let submit = () => {
@@ -79,11 +78,11 @@ class FieldPrompt {
   // default value), show the problem to the user and return `null`.
   values() {
     let result = Object.create(null), i = 0
-    for (let name in this.fields) {
-      let field = this.fields[name], dom = this.domFields[i++]
+    for (let name in this.propsfields) {
+      let field = this.props.fields[name], dom = this.domFields[i++]
       let value = field.read(dom), bad = field.validate(value)
       if (bad) {
-        this.reportInvalid(dom, this.pm.translate(bad))
+        this.reportInvalid(dom, translate(this.props, bad))
         return null
       }
       result[name] = field.clean(value)
@@ -95,7 +94,7 @@ class FieldPrompt {
   // Open a prompt with the parameter form in it. The default
   // implementation calls `openPrompt`.
   prompt() {
-    return openPrompt(this.pm, this.form, {onClose: () => this.close()})
+    return openPrompt(this.view, this.form, {onClose: () => this.close()})
   }
 
   // :: (DOMNode, string)
@@ -130,7 +129,7 @@ class Field {
   //     error message if it is not valid.
   constructor(options) { this.options = options }
 
-  // :: (pm: ProseMirror) → DOMNode #path=Field.prototype.render
+  // :: (state: EditorState, props: Object) → DOMNode #path=Field.prototype.render
   // Render the field to the DOM. Should be implemented by all subclasses.
 
   // :: (DOMNode) → any
@@ -153,11 +152,16 @@ class Field {
 }
 exports.Field = Field
 
+function translate(props, string) {
+  let f = props && props.translate
+  return f ? f(string) : string
+}
+
 // ;; A field class for single-line text fields.
 class TextField extends Field {
-  render(pm) {
+  render(_, props) {
     return elt("input", {type: "text",
-                         placeholder: pm.translate(this.options.label),
+                         placeholder: translate(props, this.options.label),
                          value: this.options.value || "",
                          autocomplete: "off"})
   }
@@ -170,11 +174,11 @@ exports.TextField = TextField
 // `{value: string, label: string}` objects, or a function taking a
 // `ProseMirror` instance and returning such an array.
 class SelectField extends Field {
-  render(pm) {
+  render(state, props) {
     let opts = this.options
-    let options = opts.options.call ? opts.options(pm) : opts.options
+    let options = opts.options.call ? opts.options(state, props) : opts.options
     return elt("select", null, options.map(o => elt("option", {value: o.value, selected: o.value == opts.value ? "true" : null},
-                                                    pm.translate(o.label))))
+                                                    translate(props, o.label))))
   }
 }
 exports.SelectField = SelectField
@@ -191,12 +195,12 @@ exports.SelectField = SelectField
 //
 // **`onClose`**`: fn()`
 //   : A function to be called when the dialog is closed.
-function openPrompt(pm, content, options) {
+function openPrompt(view, content, options) {
   let button = elt("button", {class: "ProseMirror-prompt-close"})
   let wrapper = elt("div", {class: "ProseMirror-prompt"}, content, button)
-  let outerBox = pm.view.wrapper.getBoundingClientRect()
+  let outerBox = view.wrapper.getBoundingClientRect()
 
-  pm.view.wrapper.appendChild(wrapper)
+  view.wrapper.appendChild(wrapper)
   if (options && options.pos) {
     wrapper.style.left = (options.pos.left - outerBox.left) + "px"
     wrapper.style.top = (options.pos.top - outerBox.top) + "px"
@@ -209,14 +213,13 @@ function openPrompt(pm, content, options) {
   }
 
   let close = () => {
-    pm.on.interaction.remove(close)
     if (wrapper.parentNode) {
       wrapper.parentNode.removeChild(wrapper)
       if (options && options.onClose) options.onClose()
     }
   }
   button.addEventListener("click", close)
-  pm.on.interaction.add(close)
+  // FIXME close on interaction with the editor (or on click outside?)
   return {close}
 }
 exports.openPrompt = openPrompt
