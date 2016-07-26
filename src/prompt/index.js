@@ -12,7 +12,7 @@ class FieldPrompt {
     this.doClose = null
     this.domFields = []
     for (let name in props.fields)
-      this.domFields.push(fields[name].render(view.state, props))
+      this.domFields.push(props.fields[name].render(view.state, props))
 
     let promptTitle = props.title && elt("h5", {}, translate(props, props.title))
     let submitButton = elt("button", {type: "submit", class: "ProseMirror-prompt-submit"}, "Ok")
