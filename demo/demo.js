@@ -1,15 +1,20 @@
+const {Schema} = require("../src/model")
 const {EditorState} = require("../src/state")
 const {schema} = require("../src/schema-basic")
 const {EditorView} = require("../src/view")
 const {baseKeymap} = require("../src/commands")
 const {keymap} = require("../src/keymap")
-const {history} = require("../src/history")
-const {inputRules, allInputRules} = require("../src/inputrules")
 const {MenuBar, liftItem, selectParentNodeItem, undoItem, redoItem} = require("../src/menu")
+const {exampleSetup} = require("../src/example-setup")
+const {addTableNodes} = require("../src/schema-table")
 
-const historyPlugin = history()
-const plugins = [historyPlugin, inputRules({rules: allInputRules}), keymap(baseKeymap)]
-let state = EditorState.create({doc: schema.parseDOM(document.querySelector("#content")),
+const demoSchema = new Schema({
+  nodes: addTableNodes(schema.nodeSpec, "block+", "block"),
+  marks: schema.markSpec
+})
+
+let plugins = exampleSetup({schema: demoSchema})
+let state = EditorState.create({doc: demoSchema.parseDOM(document.querySelector("#content")),
                                 plugins})
 let place = document.querySelector(".full")
 
@@ -21,7 +26,7 @@ function onAction(action) {
 
 let view = new EditorView(place, state, {onAction, plugins})
 let menuBar = new MenuBar(view, state, {
-  content: [[liftItem, selectParentNodeItem], [undoItem(historyPlugin), redoItem(historyPlugin)]],
+  content: [[liftItem, selectParentNodeItem]],
   float: true,
   something: 22,
   onAction

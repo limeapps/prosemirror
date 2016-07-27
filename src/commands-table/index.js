@@ -1,7 +1,7 @@
 const {Fragment, Slice} = require("../model")
 const {TableRow, AddColumnStep, RemoveColumnStep} = require("../schema-table")
 const {ReplaceStep} = require("../transform")
-const {Selection} = require("../edit")
+const {Selection} = require("../state")
 
 // Table-related command functions
 

@@ -1,54 +1,80 @@
 const {elt, insertCSS} = require("../util/dom")
 
-// ;; This class represents a dialog that prompts for a set of
-// fields.
+const prefix = "ProseMirror-prompt"
+
+function findPrompt(view) {
+  for (let n = view.wrapper.firstChild; n; n = n.nextSibling)
+    if (n.classList.contains(prefix)) return n
+}
+
+function editorPrompt() {
+  return {
+    stateFields: {
+      currentPrompt: {
+        init() { return null },
+        applyAction(state, action) {
+          if (action.type == "openPrompt") return action.props
+          if (action.type == "closePrompt") return null
+          return action.interaction === false ? state.currentPrompt : null
+        }
+      }
+    },
+
+    onUpdate(view, oldState, newState) {
+      if (oldState.currentPrompt != newState.currentPrompt) {
+        let dom = findPrompt(view)
+        if (dom) dom.parentNode.removeChild(dom)
+        if (newState.currentPrompt) new FieldPrompt(view, newState.currentPrompt).open()
+      }
+    }
+  }
+}
+exports.editorPrompt = editorPrompt
+
+function openPrompt(props) {
+  props.onAction({type: "openPrompt", props})
+}
+exports.openPrompt = openPrompt
+
+// This class represents a dialog that prompts for a set of fields.
 class FieldPrompt {
-  // :: (ProseMirror, string, [Field])
+  // : (EditorView, Object)
   // Construct a prompt. Note that this does not
   // [open](#FieldPrompt.open) it yet.
   constructor(view, props) {
     this.view = view
     this.props = props
-    this.doClose = null
     this.domFields = []
     for (let name in props.fields)
       this.domFields.push(props.fields[name].render(view.state, props))
 
     let promptTitle = props.title && elt("h5", {}, translate(props, props.title))
-    let submitButton = elt("button", {type: "submit", class: "ProseMirror-prompt-submit"}, "Ok")
-    let cancelButton = elt("button", {type: "button", class: "ProseMirror-prompt-cancel"}, "Cancel")
+    let submitButton = elt("button", {type: "submit", class: prefix + "-submit"}, "Ok")
+    let cancelButton = elt("button", {type: "button", class: prefix + "-cancel"}, "Cancel")
     cancelButton.addEventListener("click", () => this.close())
-    // :: DOMNode
+    // : DOMNode
     // An HTML form wrapping the fields.
     this.form = elt("form", null, promptTitle, this.domFields.map(f => elt("div", null, f)),
-                    elt("div", {class: "ProseMirror-prompt-buttons"}, submitButton, " ", cancelButton))
+                    elt("div", {class: prefix + "-buttons"}, submitButton, " ", cancelButton))
+    this.open()
   }
 
-  // :: ()
-  // Close the prompt.
   close() {
-    if (this.doClose) {
-      this.doClose()
-      this.doClose = null
-    }
+    this.props.onAction({type: "closePrompt"})
   }
 
-  // :: ()
+  // : ()
   // Open the prompt's dialog.
-  open(callback) {
-    this.close()
+  open() {
     let prompt = this.prompt()
     let hadFocus = this.view.hasFocus()
-    this.doClose = () => {
-      prompt.close()
-      if (hadFocus) setTimeout(() => this.view.focus(), 50)
-    }
 
     let submit = () => {
       let params = this.values()
       if (params) {
         this.close()
-        callback(params)
+        if (hadFocus) this.view.focus()
+        this.props.onSubmit(params, this.view.state, this.props.onAction)
       }
     }
 
@@ -71,7 +97,7 @@ class FieldPrompt {
     if (input) input.focus()
   }
 
-  // :: () → ?[any]
+  // : () → ?[any]
   // Read the values from the form's field. Validate them, and when
   // one isn't valid (either has a validate function that produced an
   // error message, or has no validate function, no value, and no
@@ -90,14 +116,14 @@ class FieldPrompt {
     return result
   }
 
-  // :: () → {close: ()}
+  // : () → {close: ()}
   // Open a prompt with the parameter form in it. The default
   // implementation calls `openPrompt`.
   prompt() {
-    return openPrompt(this.view, this.form, {onClose: () => this.close()})
+    return doOpenPrompt(this.view, this.form, this.props)
   }
 
-  // :: (DOMNode, string)
+  // : (DOMNode, string)
   // Report a field as invalid, showing the given message to the user.
   reportInvalid(dom, message) {
     // FIXME this is awful and needs a lot more work
@@ -183,49 +209,24 @@ class SelectField extends Field {
 }
 exports.SelectField = SelectField
 
-// :: (ProseMirror, DOMNode, ?Object) → {close: ()}
-// Open a dialog box for the given editor, putting `content` inside of
-// it. The `close` method on the return value can be used to
-// explicitly close the dialog again. The following options are
-// supported:
-//
-// **`pos`**`: {left: number, top: number}`
-//   : Provide an explicit position for the element. By default, it'll
-//     be placed in the center of the editor.
-//
-// **`onClose`**`: fn()`
-//   : A function to be called when the dialog is closed.
-function openPrompt(view, content, options) {
-  let button = elt("button", {class: "ProseMirror-prompt-close"})
-  let wrapper = elt("div", {class: "ProseMirror-prompt"}, content, button)
+// : (ProseMirror, DOMNode, Object)
+function doOpenPrompt(view, content, props) {
+  let button = elt("button", {class: prefix + "-close"})
+  let wrapper = elt("div", {class: prefix}, content, button)
   let outerBox = view.wrapper.getBoundingClientRect()
 
   view.wrapper.appendChild(wrapper)
-  if (options && options.pos) {
-    wrapper.style.left = (options.pos.left - outerBox.left) + "px"
-    wrapper.style.top = (options.pos.top - outerBox.top) + "px"
-  } else {
-    let blockBox = wrapper.getBoundingClientRect()
-    let cX = Math.max(0, outerBox.left) + Math.min(window.innerWidth, outerBox.right) - blockBox.width
-    let cY = Math.max(0, outerBox.top) + Math.min(window.innerHeight, outerBox.bottom) - blockBox.height
-    wrapper.style.left = (cX / 2 - outerBox.left) + "px"
-    wrapper.style.top = (cY / 2 - outerBox.top) + "px"
-  }
+  let blockBox = wrapper.getBoundingClientRect()
+  let cX = Math.max(0, outerBox.left) + Math.min(window.innerWidth, outerBox.right) - blockBox.width
+  let cY = Math.max(0, outerBox.top) + Math.min(window.innerHeight, outerBox.bottom) - blockBox.height
+  wrapper.style.left = (cX / 2 - outerBox.left) + "px"
+  wrapper.style.top = (cY / 2 - outerBox.top) + "px"
 
-  let close = () => {
-    if (wrapper.parentNode) {
-      wrapper.parentNode.removeChild(wrapper)
-      if (options && options.onClose) options.onClose()
-    }
-  }
-  button.addEventListener("click", close)
-  // FIXME close on interaction with the editor (or on click outside?)
-  return {close}
+  button.addEventListener("click", () => props.onAction({type: "closePrompt"}))
 }
-exports.openPrompt = openPrompt
 
 insertCSS(`
-.ProseMirror-prompt {
+${prefix} {
   background: white;
   padding: 2px 6px 2px 15px;
   border: 1px solid silver;
@@ -234,32 +235,32 @@ insertCSS(`
   z-index: 11;
 }
 
-.ProseMirror-prompt h5 {
+${prefix} h5 {
   margin: 0;
   font-weight: normal;
   font-size: 100%;
   color: #444;
 }
 
-.ProseMirror-prompt input[type="text"],
-.ProseMirror-prompt textarea {
+${prefix} input[type="text"],
+${prefix} textarea {
   background: #eee;
   border: none;
   outline: none;
 }
 
-.ProseMirror-prompt input[type="text"] {
+${prefix} input[type="text"] {
   padding: 0 4px;
 }
 
-.ProseMirror-prompt-close {
+${prefix}-close {
   position: absolute;
   left: 2px; top: 1px;
   color: #666;
   border: none; background: transparent; padding: 0;
 }
 
-.ProseMirror-prompt-close:after {
+${prefix}-close:after {
   content: "✕";
   font-size: 12px;
 }
@@ -273,7 +274,7 @@ insertCSS(`
   min-width: 10em;
 }
 
-.ProseMirror-prompt-buttons {
+${prefix}-buttons {
   margin-top: 5px;
   display: none;
 }
