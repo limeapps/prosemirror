@@ -135,7 +135,7 @@ test("ping_pong", state => {
 test("eat_neighboring", state => {
   state.type("o")
   state.apply(state.tr.split(1))
-  state.apply(state.tr.insertText("zzz", 3).action({addToHistory: false}))
+  state.apply(state.tr.insertText("zzz", 4).action({addToHistory: false}))
   state.undo()
   cmpNode(state.doc, doc(p("zzz")))
 })
@@ -152,13 +152,12 @@ test("ping_pong_unsynced", state => {
   state.textSel(1)
   state.type("top")
   state.apply(state.tr.insertText("yyy", 1).action({addToHistory: false}))
-  state.apply(state.tr.insertText("zzz", 7).action({addToHistory: false}))
   for (let i = 0; i < 3; i++) {
     if (i == 2) compress(state)
     for (let j = 0; j < 4; j++) state.undo()
-    cmpNode(state.doc, doc(p("yyyzzzxxx")), i + " undo")
+    cmpNode(state.doc, doc(p("yyyxxx")), i + " undo")
     for (let j = 0; j < 4; j++) state.redo()
-    cmpNode(state.doc, doc(p("yyytopzzz"), p("zero one twoxxx three")), i + " redo")
+    cmpNode(state.doc, doc(p("yyytop"), p("zero one twoxxx three")), i + " redo")
   }
 })
 
