@@ -1,121 +1,85 @@
-const {elt, insertCSS} = require("../util/dom")
+const {insertCSS} = require("../util/dom")
 
 const prefix = "ProseMirror-prompt"
 
-function editorPrompt() {
-  return {
-    stateFields: {
-      currentPrompt: {
-        init() { return null },
-        applyAction(state, action) {
-          if (action.type == "setPrompt") return action.prompt
-          return action.interaction === false ? state.currentPrompt : null
-        }
-      }
-    },
+function openPrompt(options) {
+  let wrapper = document.body.appendChild(document.createElement("div"))
+  wrapper.className = prefix
 
-    createView(editorView, state) {
-      return new PromptView(editorView, state)
-    },
+  let mouseDown = e => { if (!wrapper.contains(e.target)) close() }
+  window.addEventListener("mousedown", mouseDown, true)
+  let close = () => {
+    window.removeEventListener("mousedown", mouseDown)
+    if (wrapper.parentNode) wrapper.parentNode.removeChild(wrapper)
+  }
 
-    updateView(view, oldState, newState, props) {
-      view.update(oldState, newState, props)
-    },
+  let domFields = []
+  for (let name in options.fields) domFields.push(options.fields[name].render())
 
-    destroyView(view) {
-      view.destroy()
+  let submitButton = document.createElement("button")
+  submitButton.type = "submit"
+  submitButton.className = prefix + "-submit"
+  submitButton.textContent = "OK"
+  let cancelButton = document.createElement("button")
+  cancelButton.type = "button"
+  cancelButton.className = prefix + "-cancel"
+  cancelButton.textContent = "Cancel"
+  cancelButton.addEventListener("click", close)
+
+  let form = wrapper.appendChild(document.createElement("form"))
+  if (options.title) form.appendChild(document.createElement("h5")).textContent = options.title
+  domFields.forEach(field => {
+    form.appendChild(document.createElement("div")).appendChild(field)
+  })
+  let buttons = form.appendChild(document.createElement("div"))
+  buttons.className = prefix + "-buttons"
+  buttons.appendChild(submitButton)
+  buttons.appendChild(document.createTextNode(" "))
+  buttons.appendChild(cancelButton)
+
+  let box = wrapper.getBoundingClientRect()
+  wrapper.style.top = ((window.innerHeight - box.height) / 2) + "px"
+  wrapper.style.left = ((window.innerWidth - box.width) / 2) + "px"
+
+  let submit = () => {
+    let params = getValues(options.fields, domFields)
+    if (params) {
+      close()
+      options.callback(params)
     }
   }
-}
-exports.editorPrompt = editorPrompt
 
-function openPrompt(options) {
-  return {type: "setPrompt", prompt: options}
+  form.addEventListener("submit", e => {
+    e.preventDefault()
+    submit()
+  })
+
+  form.addEventListener("keydown", e => {
+    if (e.keyCode == 27) {
+      e.preventDefault()
+      close()
+    } else if (e.keyCode == 13 && !(e.ctrlKey || e.metaKey || e.shiftKey)) {
+      e.preventDefault()
+      submit()
+    } else if (e.keyCode == 9) {
+      window.setTimeout(() => {
+        if (!wrapper.contains(document.activeElement)) close()
+      }, 500)
+    }
+  })
+
+  let input = form.elements[0]
+  if (input) input.focus()
 }
 exports.openPrompt = openPrompt
 
-class PromptView {
-  constructor(editorView, state) {
-    this.editorView = editorView
-    this.props = editorView.props
-    this.wrapper = editorView.wrapper.appendChild(elt("div", {class: prefix}))
-
-    if (state.currentPrompt) this.drawPrompt(state.currentPrompt)
-  }
-
-  update(oldState, newState, props) {
-    this.props = props
-    if (oldState.currentPrompt != newState.currentPrompt) {
-      this.wrapper.textContent = ""
-      if (newState.currentPrompt) this.drawPrompt(newState.currentPrompt)
-    }
-  }
-
-  destroy() {
-    this.wrapper.parentNode.removeChild(this.wrapper)
-  }
-
-  drawPrompt(options) {
-    let domFields = []
-    for (let name in options.fields)
-      domFields.push(options.fields[name].render(this.props))
-
-    let close = () => this.props.onAction({type: "setPrompt"})
-
-    let promptTitle = options.title && elt("h5", {}, translate(this.props, options.title))
-    let submitButton = elt("button", {type: "submit", class: prefix + "-submit"}, "Ok")
-    let cancelButton = elt("button", {type: "button", class: prefix + "-cancel"}, "Cancel")
-    cancelButton.addEventListener("click", close)
-    // : DOMNode
-    // An HTML form wrapping the fields.
-    let form = elt("form", null, promptTitle, domFields.map(f => elt("div", null, f)),
-                   elt("div", {class: prefix + "-buttons"}, submitButton, " ", cancelButton))
-
-    this.wrapper.appendChild(form)
-    let outerBox = this.editorView.wrapper.getBoundingClientRect()
-    let blockBox = this.wrapper.getBoundingClientRect()
-    let cX = Math.max(0, outerBox.left) + Math.min(window.innerWidth, outerBox.right) - blockBox.width
-    let cY = Math.max(0, outerBox.top) + Math.min(window.innerHeight, outerBox.bottom) - blockBox.height
-    this.wrapper.style.left = (cX / 2 - outerBox.left) + "px"
-    this.wrapper.style.top = (cY / 2 - outerBox.top) + "px"
-
-    let hadFocus = this.editorView.hasFocus()
-
-    let submit = () => {
-      let params = getValues(options.fields, domFields, this.props)
-      if (params) {
-        if (hadFocus) this.editorView.focus()
-        options.onSubmit(params, this.editorView.state, this.props.onAction) || close()
-      }
-    }
-
-    form.addEventListener("submit", e => {
-      e.preventDefault()
-      submit()
-    })
-
-    form.addEventListener("keydown", e => {
-      if (e.keyCode == 27) {
-        e.preventDefault()
-        close()
-      } else if (e.keyCode == 13 && !(e.ctrlKey || e.metaKey || e.shiftKey)) {
-        e.preventDefault()
-        submit()
-      }
-    })
-
-    let input = form.elements[0]
-    if (input) input.focus()
-  }
-}
-
-function getValues(fields, domFields, props) {
+function getValues(fields, domFields) {
   let result = Object.create(null), i = 0
   for (let name in fields) {
     let field = fields[name], dom = domFields[i++]
     let value = field.read(dom), bad = field.validate(value)
     if (bad) {
-      reportInvalid(dom, translate(props, bad))
+      reportInvalid(dom, bad)
       return null
     }
     result[name] = field.clean(value)
@@ -126,8 +90,11 @@ function getValues(fields, domFields, props) {
 function reportInvalid(dom, message) {
   // FIXME this is awful and needs a lot more work
   let parent = dom.parentNode
-  let style = "left: " + (dom.offsetLeft + dom.offsetWidth + 2) + "px; top: " + (dom.offsetTop - 5) + "px"
-  let msg = parent.appendChild(elt("div", {class: "ProseMirror-invalid", style}, message))
+  let msg = parent.appendChild(document.createElement("div"))
+  msg.style.left = (dom.offsetLeft + dom.offsetWidth + 2) + "px"
+  msg.style.top = (dom.offsetTop - 5) + "px"
+  msg.className = "ProseMirror-invalid"
+  msg.textContent = message
   setTimeout(() => parent.removeChild(msg), 1500)
 }
 
@@ -174,18 +141,15 @@ class Field {
 }
 exports.Field = Field
 
-function translate(props, string) {
-  let f = props && props.translate
-  return f ? f(string) : string
-}
-
 // ;; A field class for single-line text fields.
 class TextField extends Field {
-  render(props) {
-    return elt("input", {type: "text",
-                         placeholder: translate(props, this.options.label),
-                         value: this.options.value || "",
-                         autocomplete: "off"})
+  render() {
+    let input = document.createElement("input")
+    input.type = "text"
+    input.placeholder = this.options.label
+    input.value = this.options.value || ""
+    input.autocomplete = "off"
+    return input
   }
 }
 exports.TextField = TextField
@@ -196,10 +160,15 @@ exports.TextField = TextField
 // `{value: string, label: string}` objects, or a function taking a
 // `ProseMirror` instance and returning such an array.
 class SelectField extends Field {
-  render(props) {
-    let opts = this.options.options.map(o => elt("option", {value: o.value, selected: o.value == opts.value ? "true" : null},
-                                                 translate(props, o.label)))
-    return elt("select", null, opts)
+  render() {
+    let select = document.createElement("select")
+    this.options.options.forEach(o => {
+      let opt = select.appendChild(document.createElement("option"))
+      opt.value = o.value
+      opt.selected = o.value == this.options.value
+      opt.label = o.label
+    })
+    return select
   }
 }
 exports.SelectField = SelectField
@@ -209,7 +178,7 @@ insertCSS(`
   background: white;
   padding: 2px 6px 2px 15px;
   border: 1px solid silver;
-  position: absolute;
+  position: fixed;
   border-radius: 3px;
   z-index: 11;
 }
