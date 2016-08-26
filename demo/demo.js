@@ -1,7 +1,7 @@
 const {Schema} = require("../src/model")
 const {EditorState} = require("../src/state")
 const {schema} = require("../src/schema-basic")
-const {EditorView} = require("../src/view")
+const {MenuBarEditorView} = require("../src/menu")
 const {baseKeymap} = require("../src/commands")
 const {keymap} = require("../src/keymap")
 const {exampleSetup} = require("../src/example-setup")
@@ -17,7 +17,7 @@ let state = EditorState.create({doc: demoSchema.parseDOM(document.querySelector(
                                 plugins})
 
 function onAction(action) {
-  view.update(view.state.applyAction(action))
+  view.update(view.editor.state.applyAction(action))
 }
 
-let view = window.view = new EditorView(document.querySelector(".full"), state, {onAction, plugins})
+let view = window.view = new MenuBarEditorView(document.querySelector(".full"), state, {onAction, plugins})
