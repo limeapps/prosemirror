@@ -1,18 +1,39 @@
 const {defTest} = require("../tests")
-const {tempEditor, dispatch} = require("./def")
+const {tempEditor} = require("./def")
 const {cmpNode} = require("../cmp")
 const {doc, blockquote, pre, h1, h2, p, li, ul, em, strong, code, br, hr} = require("../build")
 
+const {schema} = require("../../schema-basic")
+const {history} = require("../../history")
 const {buildKeymap} = require("../../example-setup")
-const Keymap = require("browserkeymap")
+const {keymap} = require("../../keymap")
+const {mac} = require("../../util/browser")
+const {baseKeymap} = require("../..//commands")
+const keyCodes = require("w3c-keycode")
+
+let hist = history(), plugins = [hist, keymap(buildKeymap(schema, null, hist)), keymap(baseKeymap)]
 
 function test(key, before, after) {
   defTest("keymap_" + key, () => {
-    let pm = tempEditor({doc: before})
-    pm.addKeymap(buildKeymap(pm.schema))
-    dispatch(pm, Keymap.normalizeKeyName(key.split("_")[0]))
-    cmpNode(pm.doc, after)
+    let view = tempEditor({plugins, doc: before})
+    view.dispatchKeyDown(event(key.split("_")[0]))
+    cmpNode(view.state.doc, after)
   })
+}
+
+function event(keyname) {
+  let event = document.createEvent("Event")
+  event.initEvent("keydown", true, true)
+  let parts = keyname.split("-")
+  for (let i = 0; i < parts.length - 1; i++) {
+    if ((mac && parts[i] == "Mod") || parts[i] == "Cmd") event.cmdKey = true
+    if ((!mac && parts[i] == "Mod") || parts[i] == "Ctrl") event.ctrlKey = true
+    if (parts[i] == "Shift") event.shiftKey = true
+    if (parts[i] == "Alt") event.altKey = true
+  }
+  let last = parts[parts.length - 1]
+  for (let code in keyCodes) if (keyCodes[code] == last) event.keyCode = code
+  return event
 }
 
 test("Mod-Enter_simple",
@@ -22,33 +43,33 @@ test("Mod-Enter_in_code",
      doc(pre("fo<a>o")),
      doc(pre("fo\no")))
 
-test("Mod-B_set",
+test("Mod-KeyB_set",
      doc(p("f<a>o<b>o")),
      doc(p("f", strong("o"), "o")))
-test("Mod-B_no_selection",
+test("Mod-KeyB_no_selection",
      doc(p("f<a>oo")),
      doc(p("foo")))
-test("Mod-B_across_textblocks",
+test("Mod-KeyB_across_textblocks",
      doc(p("f<a>oo"), p("ba<b>r")),
      doc(p("f", strong("oo")), p(strong("ba"), "r")))
-test("Mod-B_unset",
+test("Mod-KeyB_unset",
      doc(p(strong("f<a>o<b>o"))),
      doc(p(strong("f"), "o", strong("o"))))
-test("Mod-B_unset_across_textblocks",
+test("Mod-KeyB_unset_across_textblocks",
      doc(p("f<a>oo ", strong("ba<b>r"))),
      doc(p("foo ba", strong("r"))))
 
-test("Mod-I_set",
+test("Mod-KeyI_set",
      doc(p("f<a>o<b>o")),
      doc(p("f", em("o"), "o")))
-test("Mod-I_unset",
+test("Mod-KeyI_unset",
      doc(p(em("f<a>o<b>o"))),
      doc(p(em("f"), "o", em("o"))))
 
-test("Ctrl-`_set",
+test("Ctrl-Backquote_set",
      doc(p("f<a>o<b>o")),
      doc(p("f", code("o"), "o")))
-test("Ctrl-`_unset",
+test("Ctrl-Backquote_unset",
      doc(p(code("f<a>o<b>o"))),
      doc(p(code("f"), "o", code("o"))))
 
@@ -82,49 +103,49 @@ test("Delete_del_selection",
      doc(p("h<a>iaaa<b>c")),
      doc(p("hc")))
 
-test("Alt-Up",
+test("Alt-ArrowUp",
      doc(blockquote(p("foo")), blockquote(p("<a>bar"))),
      doc(blockquote(p("foo"), p("<a>bar"))))
-test("Alt-Down",
+test("Alt-ArrowDown",
      doc(blockquote(p("foo<a>")), blockquote(p("bar"))),
      doc(blockquote(p("foo"), p("<a>bar"))))
 
-test("Shift-Ctrl--_at_start",
+test("Shift-Ctrl-Minus_at_start",
      doc(p("<a>foo")),
      doc(hr, p("foo")))
-test("Shift-Ctrl--_before",
+test("Shift-Ctrl-Minus_before",
      doc(p("foo"), p("<a>bar")),
      doc(p("foo"), hr, p("bar")))
-test("Shift-Ctrl--_after",
+test("Shift-Ctrl-Minus_after",
      doc(p("foo<a>")),
      doc(p("foo"), hr))
-test("Shift-Ctrl--_inside",
+test("Shift-Ctrl-Minus_inside",
      doc(p("foo"), p("b<a>ar")),
      doc(p("foo"), p("b"), hr, p("ar")))
-test("Shift-Ctrl--_overwrite",
+test("Shift-Ctrl-Minus_overwrite",
      doc(p("fo<a>o"), p("b<b>ar")),
      doc(p("fo"), hr, p("ar")))
-test("Shift-Ctrl--_selected_node",
+test("Shift-Ctrl-Minus_selected_node",
      doc("<a>", p("foo"), p("bar")),
      doc(hr, p("bar")))
-test("Shift-Ctrl--_only_selected_node",
+test("Shift-Ctrl-Minus_only_selected_node",
      doc("<a>", p("bar")),
      doc(hr))
 
-test("Mod-]",
+test("Mod-BracketRight",
      doc(ul(li(p("one")), li(p("t<a><b>wo")), li(p("three")))),
      doc(ul(li(p("one"), ul(li(p("two")))), li(p("three")))))
-test("Mod-[",
+test("Mod-BracketLeft",
      doc(ul(li(p("hello"), ul(li(p("o<a><b>ne")), li(p("two")))))),
      doc(ul(li(p("hello")), li(p("one"), ul(li(p("two")))))))
 
-test("Shift-Ctrl-0",
+test("Shift-Ctrl-Digit0",
      doc(h1("fo<a>o")),
      doc(p("foo")))
-test("Shift-Ctrl-1",
+test("Shift-Ctrl-Digit1",
      doc(p("fo<a>o")),
      doc(h1("foo")))
-test("Shift-Ctrl-2",
+test("Shift-Ctrl-Digit2",
      doc(pre("fo<a>o")),
      doc(h2("foo")))
 
