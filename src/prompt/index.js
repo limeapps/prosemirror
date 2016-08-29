@@ -6,10 +6,10 @@ function openPrompt(options) {
   let wrapper = document.body.appendChild(document.createElement("div"))
   wrapper.className = prefix
 
-  let mouseDown = e => { if (!wrapper.contains(e.target)) close() }
-  window.addEventListener("mousedown", mouseDown, true)
+  let mouseOutside = e => { if (!wrapper.contains(e.target)) close() }
+  setTimeout(() => window.addEventListener("mousedown", mouseOutside), 50)
   let close = () => {
-    window.removeEventListener("mousedown", mouseDown)
+    window.removeEventListener("mousedown", mouseOutside)
     if (wrapper.parentNode) wrapper.parentNode.removeChild(wrapper)
   }
 
@@ -176,11 +176,12 @@ exports.SelectField = SelectField
 insertCSS(`
 .${prefix} {
   background: white;
-  padding: 2px 6px 2px 15px;
+  padding: 5px 10px 5px 15px;
   border: 1px solid silver;
   position: fixed;
   border-radius: 3px;
   z-index: 11;
+  box-shadow: -.5px 2px 5px rgba(0, 0, 0, .2);
 }
 
 .${prefix} h5 {
