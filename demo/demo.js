@@ -20,4 +20,4 @@ function onAction(action) {
   view.update(view.editor.state.applyAction(action))
 }
 
-let view = window.view = new MenuBarEditorView(document.querySelector(".full"), state, {onAction, plugins})
+let view = window.view = new MenuBarEditorView(document.querySelector(".full"), state, {onAction})

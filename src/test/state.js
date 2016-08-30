@@ -15,7 +15,6 @@ exports.TestState = class TestState {
   constructor(config) {
     if (!config.selection && config.doc) config.selection = selFor(config.doc)
     this.state = EditorState.create(config)
-    this.plugins = config.plugins || []
   }
 
   apply(action) {
@@ -31,14 +30,14 @@ exports.TestState = class TestState {
   }
 
   undo() {
-    this.plugins.forEach(plugin => {
+    this.state.plugins.forEach(plugin => {
       if (plugin.undo)
         plugin.undo(this.state, action => this.state = this.state.applyAction(action))
     })
   }
 
   redo() {
-    this.plugins.forEach(plugin => {
+    this.state.plugins.forEach(plugin => {
       if (plugin.redo)
         plugin.redo(this.state, action => this.state = this.state.applyAction(action))
     })
