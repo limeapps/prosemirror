@@ -1,5 +1,3 @@
-const {insertCSS} = require("../util/dom")
-
 const prefix = "ProseMirror-prompt"
 
 function openPrompt(options) {
@@ -172,60 +170,3 @@ class SelectField extends Field {
   }
 }
 exports.SelectField = SelectField
-
-insertCSS(`
-.${prefix} {
-  background: white;
-  padding: 5px 10px 5px 15px;
-  border: 1px solid silver;
-  position: fixed;
-  border-radius: 3px;
-  z-index: 11;
-  box-shadow: -.5px 2px 5px rgba(0, 0, 0, .2);
-}
-
-.${prefix} h5 {
-  margin: 0;
-  font-weight: normal;
-  font-size: 100%;
-  color: #444;
-}
-
-.${prefix} input[type="text"],
-.${prefix} textarea {
-  background: #eee;
-  border: none;
-  outline: none;
-}
-
-.${prefix} input[type="text"] {
-  padding: 0 4px;
-}
-
-.${prefix}-close {
-  position: absolute;
-  left: 2px; top: 1px;
-  color: #666;
-  border: none; background: transparent; padding: 0;
-}
-
-.${prefix}-close:after {
-  content: "✕";
-  font-size: 12px;
-}
-
-.ProseMirror-invalid {
-  background: #ffc;
-  border: 1px solid #cc7;
-  border-radius: 4px;
-  padding: 5px 10px;
-  position: absolute;
-  min-width: 10em;
-}
-
-.${prefix}-buttons {
-  margin-top: 5px;
-  display: none;
-}
-
-`)
