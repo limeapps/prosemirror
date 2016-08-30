@@ -23,23 +23,6 @@ function add(value, target) {
 }
 
 
-const reqFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame ||
-      window.webkitRequestAnimationFrame || window.msRequestAnimationFrame
-const cancelFrame = window.cancelAnimationFrame || window.mozCancelAnimationFrame ||
-      window.webkitCancelAnimationFrame || window.msCancelAnimationFrame
-
-function requestAnimationFrame(f) {
-  if (reqFrame) return reqFrame.call(window, f)
-  else return setTimeout(f, 10)
-}
-exports.requestAnimationFrame = requestAnimationFrame
-
-function cancelAnimationFrame(handle) {
-  if (reqFrame) return cancelFrame.call(window, handle)
-  else clearTimeout(handle)
-}
-exports.cancelAnimationFrame = cancelAnimationFrame
-
 // : (DOMNode, DOMNode) → bool
 // Check whether a DOM node is an ancestor of another DOM node.
 function contains(parent, child) {
