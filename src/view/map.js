@@ -1,3 +1,5 @@
+// FIXME drop when we have new-style decorations
+
 const Map = window.Map || class {
   constructor() { this.content = [] }
   set(key, value) {
