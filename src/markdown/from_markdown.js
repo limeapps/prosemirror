@@ -1,6 +1,11 @@
 const markdownit = require("markdown-it")
-const {schema} = require("../schema-basic")
-const {Mark} = require("../model")
+const {schema: basicSchema} = require("../schema-basic")
+const {addListNodes} = require("../schema-list")
+const {Schema, Mark} = require("../model")
+
+// FIXME use a centrally defined markdown schema
+const schema = new Schema({nodes: addListNodes(basicSchema.nodeSpec, "paragraph block*", "block"),
+                           marks: basicSchema.markSpec})
 
 function maybeMerge(a, b) {
   if (a.isText && b.isText && Mark.sameSet(a.marks, b.marks))

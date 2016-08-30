@@ -1,9 +1,8 @@
 const {defTest} = require("../tests")
 const {tempEditor} = require("./def")
 const {cmpNode} = require("../cmp")
-const {doc, blockquote, pre, h1, h2, p, li, ul, em, strong, code, br, hr} = require("../build")
+const {schema, doc, blockquote, pre, h1, h2, p, li, ul, em, strong, code, br, hr} = require("../build")
 
-const {schema} = require("../../schema-basic")
 const {history} = require("../../history")
 const {buildKeymap} = require("../../example-setup")
 const {keymap} = require("../../keymap")

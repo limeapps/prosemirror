@@ -1,8 +1,6 @@
 const {Fragment} = require("../model")
-const {schema} = require("../schema-basic")
 
-const {doc, blockquote, p, li, ul, em, strong, code, br, img} = require("./build")
-
+const {schema, doc, blockquote, p, li, ul, em, strong, code, br, img} = require("./build")
 const {Failure} = require("./failure")
 const {defTest} = require("./tests")
 const {cmpNode, cmpStr} = require("./cmp")

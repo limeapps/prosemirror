@@ -1,9 +1,8 @@
 const {collab} = require("../collab")
 const {EditorState, Selection} = require("../state")
 const {history} = require("../history")
-const {schema} = require("../schema-basic")
 
-const {doc, p} = require("./build")
+const {schema, doc, p} = require("./build")
 const {defTest} = require("./tests")
 const {cmpNode, cmp} = require("./cmp")
 

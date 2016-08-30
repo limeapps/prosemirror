@@ -2,7 +2,7 @@ const {defTest} = require("../tests")
 const {selFor} = require("../state")
 const {EditorView} = require("../../view")
 const {EditorState} = require("../../state")
-const {schema} = require("../../schema-basic")
+const {schema} = require("../build")
 
 let tempViews = null
 

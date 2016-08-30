@@ -1,9 +1,8 @@
-const {doc, blockquote, pre, p, li, ul, img, br, hr} = require("./build")
+const {schema, doc, blockquote, pre, p, li, ul, img, br, hr} = require("./build")
 const {cmp, cmpNode, is} = require("./cmp")
 const {defTest} = require("./tests")
 const {TestState} = require("./state")
 
-const {schema} = require("../schema-basic")
 const {selectParentNode, lift, joinDown, joinUp, deleteSelection} = require("../commands")
 
 function test(name, f, options) {

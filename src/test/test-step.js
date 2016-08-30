@@ -1,8 +1,7 @@
 const {Slice, Fragment} = require("../model")
 const {ReplaceStep, AddMarkStep, RemoveMarkStep} = require("../transform")
-const {schema} = require("../schema-basic")
 
-const {doc, p} = require("./build")
+const {schema, doc, p} = require("./build")
 const {defTest} = require("./tests")
 const {cmpNode} = require("./cmp")
 const {Failure} = require("./failure")

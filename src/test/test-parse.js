@@ -1,12 +1,16 @@
 const {doc, blockquote, h1, h2, p, hr, li, ol, ul, pre, em, strong, code, a, br, img, dataImage} = require("./build")
-const {cmpNode, cmpStr} = require("./cmp")
+const {cmpStr} = require("./cmp")
 const {defTest} = require("./tests")
 
 const {defaultMarkdownParser, defaultMarkdownSerializer} = require("../markdown")
 
 function t(name, text, doc) {
   defTest("parse_" + name, () => {
-    cmpNode(defaultMarkdownParser.parse(text), doc)
+    // FIXME this is currently comparing documents from two different
+    // schemas. Should eventually move to the Markdown-specific
+    // schema.
+    cmpStr(JSON.stringify(defaultMarkdownParser.parse(text).toJSON()),
+           JSON.stringify(doc.toJSON()))
     cmpStr(defaultMarkdownSerializer.serialize(doc), text)
   })
 }

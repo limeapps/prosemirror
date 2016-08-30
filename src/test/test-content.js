@@ -1,8 +1,7 @@
 const {ContentExpr} = require("../model/content")
-const {schema} = require("../schema-basic")
 
 const {defTest} = require("./tests")
-const {doc, p, pre, img, br, h1, h2, em, hr} = require("./build")
+const {schema, doc, p, pre, img, br, h1, h2, em, hr} = require("./build")
 const {cmp, cmpNode, is} = require("./cmp")
 
 function get(expr) { return ContentExpr.parse(schema.nodes.heading, expr, schema.nodeSpec) }

@@ -1,8 +1,8 @@
 const {Mark} = require("../model")
-const {schema} = require("../schema-basic")
+
 const {Failure} = require("./failure")
 const {defTest} = require("./tests")
-const {doc, p, em, a} = require("./build")
+const {schema, doc, p, em, a} = require("./build")
 
 function assert(name, value) {
   if (!value) throw new Failure("Assertion failed: " + name)

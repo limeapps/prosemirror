@@ -1,9 +1,8 @@
 const {history} = require("../history")
-const {schema} = require("../schema-basic")
-const {sinkListItem, liftListItem, splitListItem} = require("../commands-list")
+const {sinkListItem, liftListItem, splitListItem} = require("../schema-list")
 const {liftEmptyBlock} = require("../commands")
 
-const {doc, p, ul, li} = require("./build")
+const {schema, doc, p, ul, li} = require("./build")
 const {TestState} = require("./state")
 const {is, cmp, cmpNode} = require("./cmp")
 const {defTest} = require("./tests")

@@ -1,9 +1,8 @@
-const {doc, blockquote, pre, h1, h2, p, li, ol, ul, em, strong, code, a, a2, br, img, hr} = require("./build")
+const {schema, doc, blockquote, pre, h1, h2, p, li, ol, ul, em, strong, code, a, a2, br, img, hr} = require("./build")
 const {Failure} = require("./failure")
 const {cmpNode, cmp, cmpStr} = require("./cmp")
 const {defTest} = require("./tests")
 
-const {schema} = require("../schema-basic")
 const {parseDOMInContext} = require("../model")
 
 let document = typeof window == "undefined" ? require("jsdom").jsdom() : window.document

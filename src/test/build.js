@@ -1,5 +1,10 @@
-const {schema} = require("../schema-basic")
-const {Node} = require("../model")
+const {schema: basicSchema} = require("../schema-basic")
+const {addListNodes} = require("../schema-list")
+const {Node, Schema} = require("../model")
+
+const schema = new Schema({nodes: addListNodes(basicSchema.nodeSpec, "paragraph block*", "block"),
+                           marks: basicSchema.markSpec})
+exports.schema = schema
 
 // This file defines a set of helpers for building up documents to be
 // used in the test suite. You can say, for example, `doc(p("foo"))`

@@ -1,5 +1,54 @@
 const {findWrapping, liftTarget, canSplit, ReplaceAroundStep} = require("../transform")
-const {Slice, Fragment, NodeRange} = require("../model")
+const {Block, Attribute, Slice, Fragment, NodeRange} = require("../model")
+
+// ;; An ordered list node type. Has a single attribute, `order`,
+// which determines the number at which the list starts counting, and
+// defaults to 1.
+class OrderedList extends Block {
+  get attrs() { return {order: new Attribute({default: 1})} }
+  get matchDOMTag() {
+    return {"ol": dom => ({
+      order: dom.hasAttribute("start") ? +dom.getAttribute("start") : 1
+    })}
+  }
+  toDOM(node) {
+    return ["ol", {start: node.attrs.order == 1 ? null : node.attrs.order}, 0]
+  }
+}
+exports.OrderedList = OrderedList
+
+// ;; A bullet list node type.
+class BulletList extends Block {
+  get matchDOMTag() { return {"ul": null} }
+  toDOM() { return ["ul", 0] }
+}
+exports.BulletList = BulletList
+
+// ;; A list item node type.
+class ListItem extends Block {
+  get matchDOMTag() { return {"li": null} }
+  toDOM() { return ["li", 0] }
+}
+exports.ListItem = ListItem
+
+// :: (OrderedMap, string, ?string) → OrderedMap
+// Convenience function for adding list-related node types to a map
+// describing the nodes in a schema. Adds `OrderedList` as
+// `"ordered_list"`, `BulletList` as `"bullet_list"`, and `ListItem`
+// as `"list_item"`. `itemContent` determines the content expression
+// for the list items. If you want the commands defined in this module
+// to apply to your list structure, it should have a shape like
+// `"paragraph block*"`, a plain textblock type followed by zero or
+// more arbitrary nodes. `listGroup` can be given to assign a group
+// name to the list node types, for example `"block"`.
+function addListNodes(nodes, itemContent, listGroup) {
+  return nodes.append({
+    ordered_list: {type: OrderedList, content: "list_item+", group: listGroup},
+    bullet_list: {type: BulletList, content: "list_item+", group: listGroup},
+    list_item: {type: ListItem, content: itemContent}
+  })
+}
+exports.addListNodes = addListNodes
 
 // !! This module exports a number of list-related commands, which
 // assume lists to be nestable, but with the restriction that the

@@ -1,6 +1,5 @@
-const {schema} = require("../schema-basic")
-
-const {doc, blockquote, pre, h1, h2, p, li, ol, ul, em, strong, code, a, a2, img, img2, dataImage, br, hr} = require("./build")
+const {schema, doc, blockquote, pre, h1, h2, p, li, ol, ul, em,
+       strong, code, a, a2, img, img2, dataImage, br, hr} = require("./build")
 
 const {defTest} = require("./tests")
 const {tr, testTransform} = require("./trans")

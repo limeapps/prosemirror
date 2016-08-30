@@ -1,11 +1,11 @@
 const commands = require("../commands")
-const listCommands = require("../commands-list")
+const listCommands = require("../schema-list")
 const {Schema} = require("../model")
-const {schema, Heading, Doc} = require("../schema-basic")
+const {Heading, Doc} = require("../schema-basic")
 
 const {defTest} = require("./tests")
 const {cmpNode} = require("./cmp")
-const {doc, blockquote, pre, h1, h2, p, li, ol, ul, em, hr} = require("./build")
+const {schema, doc, blockquote, pre, h1, h2, p, li, ol, ul, em, hr} = require("./build")
 const {TestState} = require("./state")
 
 const used = Object.create(null)
