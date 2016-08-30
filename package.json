@@ -21,7 +21,8 @@
     "markdown-it": "^6.0.4",
     "rope-sequence": "^1.2.0",
     "subscription": "^3.0.0",
-    "w3c-keycode": "^1.0.0"
+    "w3c-keycode": "^1.0.0",
+    "extending-char": "^1.0.0"
   },
   "devDependencies": {
     "babel-cli": "^6.4.0",
