@@ -6,9 +6,9 @@ const {schema, doc, blockquote, pre, h1, h2, p, li, ul, em, strong, code, br, hr
 const {history} = require("../../history")
 const {buildKeymap} = require("../../example-setup")
 const {keymap} = require("../../keymap")
-const {mac} = require("../../util/browser")
 const {baseKeymap} = require("../..//commands")
 const keyCodes = require("w3c-keycode")
+const mac = typeof navigator != "undefined" ? /Mac/.test(navigator.platform) : false
 
 let hist = history(), plugins = [hist, keymap(buildKeymap(schema, null, hist)), keymap(baseKeymap)]
 

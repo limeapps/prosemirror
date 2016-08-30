@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "crel": "^3.0.0",
+    "detect-browser": "^1.4.0",
     "markdown-it": "^6.0.4",
     "rope-sequence": "^1.2.0",
     "subscription": "^3.0.0",
