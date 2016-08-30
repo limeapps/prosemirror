@@ -1,8 +1,7 @@
 const {schema} = require("../schema-basic")
 const {EditorState, TextSelection} = require("../state")
 
-const {doc, p, ul, li} = require("./build")
-const {TestState} = require("./state")
+const {doc, p} = require("./build")
 const {is, cmp, cmpNode} = require("./cmp")
 const {defTest} = require("./tests")
 
