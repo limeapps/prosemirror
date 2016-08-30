@@ -208,7 +208,7 @@ function ctx(name, doc, html, openLeft, slice) {
     for (let d = $insert.depth; d > 0 && insert == $insert.start(d) && $insert.end(d) == $insert.after(d + 1); d--) insert--
     let result = parseDOMInContext(doc.resolve(insert), dom, {openLeft})
     let sliceContent = slice.content, sliceEnd = sliceContent.size
-    while (sliceContent.lastChild && !sliceContent.lastChild.type.isLeaf) { sliceEnd--; sliceContent = sliceContent.lastChild.content }
+    while (sliceContent.lastChild && !sliceContent.lastChild.isLeaf) { sliceEnd--; sliceContent = sliceContent.lastChild.content }
     let expected = slice.slice(slice.tag.a, sliceEnd)
     cmpStr(result, expected)
   })
