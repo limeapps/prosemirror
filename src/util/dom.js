@@ -23,17 +23,6 @@ function add(value, target) {
 }
 
 
-// : (DOMNode, DOMNode) → bool
-// Check whether a DOM node is an ancestor of another DOM node.
-function contains(parent, child) {
-  // Android browser and IE will return false if child is a text node.
-  if (child.nodeType != 1)
-    child = child.parentNode
-  return child && parent.contains(child)
-}
-exports.contains = contains
-
-
 let accumulatedCSS = "", cssNode = null
 
 function insertCSS(css) {
