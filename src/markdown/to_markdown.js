@@ -38,7 +38,7 @@ class MarkdownSerializer {
 exports.MarkdownSerializer = MarkdownSerializer
 
 // :: MarkdownSerializer
-// A serializer for the [basic schema](#schema).
+// A serializer for the [basic schema](#schema-basic.schema).
 const defaultMarkdownSerializer = new MarkdownSerializer({
   blockquote(state, node) {
     state.wrapBlock("> ", null, node, () => state.renderContent(node))
