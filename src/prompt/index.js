@@ -116,10 +116,10 @@ class Field {
   //     error message if it is not valid.
   constructor(options) { this.options = options }
 
-  // render:: (state: EditorState, props: Object) → DOMNode
+  // render:: (state: EditorState, props: Object) → dom.Node
   // Render the field to the DOM. Should be implemented by all subclasses.
 
-  // :: (DOMNode) → any
+  // :: (dom.Node) → any
   // Read the field's value from its DOM node.
   read(dom) { return dom.value }
 
