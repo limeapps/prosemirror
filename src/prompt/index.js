@@ -96,7 +96,7 @@ function reportInvalid(dom, message) {
   setTimeout(() => parent.removeChild(msg), 1500)
 }
 
-// ;; The type of field that `FieldPrompt` expects to be passed to it.
+// ::- The type of field that `FieldPrompt` expects to be passed to it.
 class Field {
   // :: (Object)
   // Create a field with the given options. Options support by all
@@ -116,7 +116,7 @@ class Field {
   //     error message if it is not valid.
   constructor(options) { this.options = options }
 
-  // :: (state: EditorState, props: Object) → DOMNode #path=Field.prototype.render
+  // render:: (state: EditorState, props: Object) → DOMNode
   // Render the field to the DOM. Should be implemented by all subclasses.
 
   // :: (DOMNode) → any
@@ -139,7 +139,7 @@ class Field {
 }
 exports.Field = Field
 
-// ;; A field class for single-line text fields.
+// ::- A field class for single-line text fields.
 class TextField extends Field {
   render() {
     let input = document.createElement("input")
@@ -153,7 +153,7 @@ class TextField extends Field {
 exports.TextField = TextField
 
 
-// ;; A field class for dropdown fields based on a plain `<select>`
+// ::- A field class for dropdown fields based on a plain `<select>`
 // tag. Expects an option `options`, which should be an array of
 // `{value: string, label: string}` objects, or a function taking a
 // `ProseMirror` instance and returning such an array.

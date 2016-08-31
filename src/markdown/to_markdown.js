@@ -1,4 +1,4 @@
-// ;; A specification for serializing a ProseMirror document as
+// ::- A specification for serializing a ProseMirror document as
 // Markdown/CommonMark text.
 class MarkdownSerializer {
   // :: (Object<(MarkdownSerializerState, Node)>, Object)
@@ -106,7 +106,7 @@ const defaultMarkdownSerializer = new MarkdownSerializer({
 })
 exports.defaultMarkdownSerializer = defaultMarkdownSerializer
 
-// ;; This is an object used to track state and expose
+// ::- This is an object used to track state and expose
 // methods related to markdown serialization. Instances are passed to
 // node and mark serialization methods (see `toMarkdown`).
 class MarkdownSerializerState {
