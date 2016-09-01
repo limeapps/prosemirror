@@ -1,4 +1,5 @@
 const {EditorState, Selection, TextSelection, NodeSelection} = require("../state")
+const {undo, redo} = require("../history")
 
 function selFor(doc) {
   let a = doc.tag.a
@@ -30,17 +31,11 @@ exports.TestState = class TestState {
   }
 
   undo() {
-    this.state.plugins.forEach(plugin => {
-      if (plugin.undo)
-        plugin.undo(this.state, action => this.state = this.state.applyAction(action))
-    })
+    undo(this.state, action => this.state = this.state.applyAction(action))
   }
 
   redo() {
-    this.state.plugins.forEach(plugin => {
-      if (plugin.redo)
-        plugin.redo(this.state, action => this.state = this.state.applyAction(action))
-    })
+    redo(this.state, action => this.state = this.state.applyAction(action))
   }
 
   textSel(anchor, head) {

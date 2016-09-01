@@ -1,10 +1,10 @@
-const {EditorState, TextSelection} = require("../state")
+const {EditorState, TextSelection, Plugin} = require("../state")
 
 const {schema, doc, p} = require("./build")
 const {is, cmp, cmpNode} = require("./cmp")
 const {defTest} = require("./tests")
 
-const messageCountPlugin = {
+const messageCountPlugin = new Plugin({
   stateFields: {
     messageCount: {
       init() { return 0 },
@@ -13,7 +13,7 @@ const messageCountPlugin = {
       fromJSON(_, count) { return count }
     }
   }
-}
+})
 
 function test(name, conf, f) {
   defTest("state_" + name, () => {

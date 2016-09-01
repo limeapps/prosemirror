@@ -7,10 +7,10 @@ const {TestState} = require("./state")
 const {is, cmp, cmpNode} = require("./cmp")
 const {defTest} = require("./tests")
 
-let plugin = history(), pluginPreserve = history({preserveItems: true})
+let pluginPreserve = history.configure({preserveItems: true})
 
 function test(name, f, doc, preserve) {
-  defTest("history_" + name, () => f(new TestState({doc, schema, plugins: [preserve ? pluginPreserve : plugin]})))
+  defTest("history_" + name, () => f(new TestState({doc, schema, plugins: [preserve ? pluginPreserve : history]})))
 }
 
 function compress(state) {

@@ -13,9 +13,8 @@ const demoSchema = new Schema({
   marks: schema.markSpec
 })
 
-let plugins = exampleSetup({schema: demoSchema})
 let state = EditorState.create({doc: demoSchema.parseDOM(document.querySelector("#content")),
-                                plugins})
+                                plugins: [exampleSetup({schema: demoSchema})]})
 
 function onAction(action) {
   view.updateState(view.editor.state.applyAction(action))

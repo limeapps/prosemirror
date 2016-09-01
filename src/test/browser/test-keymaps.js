@@ -3,14 +3,13 @@ const {tempEditor} = require("./def")
 const {cmpNode} = require("../cmp")
 const {schema, doc, blockquote, pre, h1, h2, p, li, ul, em, strong, code, br, hr} = require("../build")
 
-const {history} = require("../../history")
 const {buildKeymap} = require("../../example-setup")
 const {keymap} = require("../../keymap")
 const {baseKeymap} = require("../..//commands")
 const keyCodes = require("w3c-keycode")
 const mac = typeof navigator != "undefined" ? /Mac/.test(navigator.platform) : false
 
-let hist = history(), plugins = [hist, keymap(buildKeymap(schema, null, hist)), keymap(baseKeymap)]
+let plugins = [keymap(buildKeymap(schema)), keymap(baseKeymap)]
 
 function test(key, before, after) {
   defTest("keymap_" + key, () => {

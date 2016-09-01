@@ -1,22 +1,18 @@
-const {collab} = require("../collab")
+const {collab, receiveAction, sendableSteps} = require("../collab")
 const {EditorState, Selection} = require("../state")
-const {history} = require("../history")
+const {history, undo, redo} = require("../history")
 
 const {schema, doc, p} = require("./build")
 const {defTest} = require("./tests")
 const {cmpNode, cmp} = require("./cmp")
 
-const histPlugin = history({preserveItems: true})
+const histPlugin = history.configure({preserveItems: true})
 
 class DummyServer {
   constructor(doc, n) {
     this.states = []
-    this.collab = []
-    for (let i = 0; i < n; i++) {
-      let plugin = collab()
-      this.collab.push(plugin)
-      this.states.push(EditorState.create({doc, schema, plugins: [histPlugin, plugin]}))
-    }
+    for (let i = 0; i < n; i++)
+      this.states.push(EditorState.create({doc, schema, plugins: [histPlugin, collab()]}))
     this.steps = []
     this.clientIDs = []
     this.delayed = []
@@ -25,11 +21,11 @@ class DummyServer {
   sync(n) {
     let state = this.states[n], version = state.collab.version
     if (version != this.steps.length)
-      this.states[n] = state.applyAction(this.collab[n].receiveAction(state, this.steps.slice(version), this.clientIDs.slice(version)))
+      this.states[n] = state.applyAction(receiveAction(state, this.steps.slice(version), this.clientIDs.slice(version)))
   }
 
   send(n) {
-    let sendable = this.collab[n].sendableSteps(this.states[n])
+    let sendable = sendableSteps(this.states[n])
     if (sendable && sendable.version == this.steps.length) {
       this.steps = this.steps.concat(sendable.steps)
       for (let i = 0; i < sendable.steps.length; i++) this.clientIDs.push(sendable.clientID)
@@ -53,11 +49,11 @@ class DummyServer {
   }
 
   undo(n) {
-    histPlugin.undo(this.states[n], a => this.update(n, () => a))
+    undo(this.states[n], a => this.update(n, () => a))
   }
 
   redo(n) {
-    histPlugin.redo(this.states[n], a => this.update(n, () => a))
+    redo(this.states[n], a => this.update(n, () => a))
   }
 
   conv(d) {
